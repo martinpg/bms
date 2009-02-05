@@ -3,18 +3,10 @@
 //     1 - Shutdown (active low @todo)
 //     2 - Charge (1), Discharge (0)
 //	   3 - Soft fail (still running)
-#define FAIL		0x02;
-#define SOFT_FAIL	0x08;
-unsigned char STATUS_REG;
-
-// ERROR_REGL
-//     1 - Undervoltage
-//     2 - Overvoltage
-//     3 - Overcurrent 
-//     4 - Overtemperature
-//     5 - 5V Brownout (@todo unimplemented)
-//     6 - Unbalanced (@todo unimplemented)
-//     7 - Remote shutdown (@todo unimplemented)
+//     4 - RESERVED
+//     5 - RESERVED
+//     6 - RESERVED
+//     7 - RESERVEd
 //     8 - RESERVED
 //     9 - RESERVED
 //    10 - RESERVED
@@ -23,6 +15,21 @@ unsigned char STATUS_REG;
 //    13 - RESERVED
 //    14 - RESERVED
 //    15 - RESERVED
+#define SHDN		0x01;
+#define FAIL		0x02;
+#define SOFT_FAIL	0x08;
+
+unsigned char STATUS_REG, ERROR_REGL, ERROR_REGH;
+
+// ERROR_REGL
+//     0 - Undervoltage
+//     1 - Overvoltage
+//     2 - Overcurrent 
+//     3 - Overtemperature
+//     4 - 5V Brownout (@todo unimplemented)
+//     5 - Unbalanced (@todo unimplemented)
+//     6 - Remote shutdown (@todo unimplemented)
+//     7 - RESERVED
 
 #define UNDERVOLT		0x01;
 #define OVERVOLT		0x02;
@@ -36,8 +43,11 @@ unsigned char STATUS_REG;
 //     1 - Oscillator Failure
 //     2 - EEPROM Read Failure
 //     3 - Voltage Reference Failure
+//     4 - RESERVED
+//     5 - RESERVED
+//     6 - RESERVED
+//     7 - RESERVED
+
 #define OSC_FAIL		0x01;
 #define READ_FAIL		0x02;
 #define REF_FAIL		0x04;
-
-unsigned int ERROR_REGL, ERROR_REGH;
