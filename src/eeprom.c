@@ -1,9 +1,12 @@
 #include <p18f2680.h>
+#include <status.h>
 
 void writeWord(unsigned char address, unsigned int x);
 unsigned int readWord(unsigned char address);
 void eepromWrite(unsigned char address, unsigned char x);
 unsigned char eepromRead(unsigned char address);
+
+unsigned char EEPROM_START;
 
 void writeWord(unsigned char address, unsigned int x) {
 	unsigned char *ptr = &x;
