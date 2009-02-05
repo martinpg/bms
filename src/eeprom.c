@@ -50,8 +50,8 @@ void eepromWrite(unsigned char address, unsigned char x) {
 	EECON1bits.WR = 1; // write
 	while (PIR2bits.EEIF == 0); // wait to complete
 	if (EECON1bits.WRERR) {
-		ERROR |= READ_FAIL;
-		STATUS |= SOFT_FAIL;
+		ERROR_REGH |= READ_FAIL;
+		STATUS_REG |= SOFT_FAIL;
 	}
 	EECON1bits.WREN = 0; // disable writes
 	INTCONbits.GIE = oldGIE; // re-enable interrupts

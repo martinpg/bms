@@ -2,8 +2,9 @@
 #include <adc.h>
 #include <delays.h>
 #include <math.h>
-#include <mymath.h>
-#include <eeprom.h>
+#include <status.h>
+#include <eeprom.c>
+#include <mymath.c>
 
 void init(void);
 void main(void);
@@ -16,41 +17,9 @@ void openRelay(void);
 void closeRelay(void);
 void checkVoltage(float x);
 void interruptHandlerHigh (void);
-void writeWord(unsigned char address, unsigned int x);
-unsigned int readWord(unsigned char address);
-unsigned char eepromRead(unsigned char address);
-void eepromWrite(unsigned char address, unsigned char x);
-unsigned int floatToInt(float x);
-float intToFloat(unsigned int x);
-
-//#define MAX_CELLS	8;
-//#define VREF		5; // Reference voltage
 //#define samples 	1; // Samples to keep
 
-// Error "codes"
-//     1 - Undervoltage
-//     2 - Overvoltage
-//     3 - Overcurrent 
-//     4 - Overtemperature
-//     5 - 5V Brownout (@todo unimplemented)
-//     6 - Unbalanced (@todo unimplemented)
-//     7 - Remote shutdown (@todo unimplemented)
-//     8 - ** This bit indicates an oscillator failure
-#define UNDERVOLT		0x01;
-#define OVERVOLT		0x02;
-#define OVERCURRENT		0x03; 
-#define OVERTEMP		0x04;
-#define	BROWNOUT		0x05;
-#define UNBALANCED		0x06;
-#define REMOTE_SHDN		0x07;
-
-#define OSC_FAIL		0x08;
-#define READ_FAIL		0x10;
-#define VREF_FAIL		0x20;
-
-unsigned char ERROR;
-
-const int MAX_CELLS = 8;
+unsigned int MAX_CELLS = 8;
 unsigned int VRef;
 // const unsigned int samples = 1;
 
@@ -58,16 +27,6 @@ unsigned char CURRENT_CELL;
 unsigned int voltage[8];
 unsigned int temp[8];
 unsigned int current;
-unsigned char EEPROM_START;
-
-// Status "register"
-// LSB 0 - Active (@todo high speed mode) ( >1 mA)
-//     1 - Shutdown (active low @todo)
-//     2 - Charge (1), Discharge (0)
-//	   3 - Soft fail (still running)
-#define FAIL		0x02;
-#define SOFT_FAIL	0x08;
-unsigned char STATUS_REG;
 
 // Default set points (saved to EEPROM if erased)
 unsigned int OVERVOLT_LIMIT = 4.2; // Overvoltage setpoint (volts)
@@ -76,7 +35,9 @@ unsigned int DISCHG_RATE_LIMIT = 6.0; // Overcurrent (discharge) setpoint (amps)
 unsigned int CHARGE_RATE_LIMIT = 6.0; // Overcurrent (charge) setpoint (amps)
 unsigned int TEMP_DISCHG_LIMIT = 85.0; // Max discharge temperature
 unsigned int TEMP_CHARGE_LIMIT = 60.0; // Max charge temperature
-unsigned int CURRENT_THRES	= 0.01; // Amps
+unsigned int CURRENT_THRES	= 0.01; // Amps, Threshold of charge / discharge
+unsigned int REF_LOW_LIMIT = 2.4; // Volts, Reference too low
+unsigned int REF_HI_LIMIT = 2.6; // Volts, Reference too high
 
 void init(void) {
 	// Initialize global variables
@@ -115,7 +76,9 @@ void init(void) {
 		writeWord(0x09, TEMP_CHARGE_LIMIT);
 		writeWord(0x0B, TEMP_DISCHG_LIMIT);
 		writeWord(0x0D, CURRENT_THRES);
-		EEPROM_START = 0x10;
+		writeWord(0x0F, REF_LOW_LIMIT);
+		writeWord(0x11, REF_HI_LIMIT);
+		EEPROM_START = 0x13;
 		eepromWrite(0x00, EEPROM_START);
 	} else {
 		eepromWrite(0x00, EEPROM_START);
@@ -126,6 +89,8 @@ void init(void) {
 		TEMP_CHARGE_LIMIT = readWord(0x09);
 		TEMP_DISCHG_LIMIT = readWord(0x0B);
 		CURRENT_THRES = readWord(0x0D);
+		REF_LOW_LIMIT = readWord(0x0F);
+		REF_HI_LIMIT = readWord(0x11);
 	}
 
 	// Enable High / Low voltage detect (for Vdd)
@@ -137,16 +102,24 @@ void init(void) {
 void main(void) {
 	init();	
 	// @todo check vref to see if its not broken first!
+	// Open ADC port looking at VRef+ pin
 	OpenADC(ADC_FOSC_8 & 
 			ADC_RIGHT_JUST &
 			ADC_16_TAD, 
-			ADC_CH0 &
+			ADC_CH3 &
 			ADC_INT_ON &
 			ADC_REF_VDD_VSS, 
 			ADC_15ANA);
-	Delay10TCYx(5); // delay for 50 cycles?
+	Delay10TCYx(5); // delay for 50 cycles
 	ConvertADC();
 	setLED(1);
+	while (BusyADC()); // wait for ADC to complete
+	clearLED(1);
+	if (ReadADC() < REF_LOW_LIMIT || ReadADC() > REF_HI_LIMIT) {
+		// Reference is broken
+		STATUS |= SOFT_FAIL;
+		ERROR |= REF_FAIL;
+	}
 	// @todo put vref in eeprom
 
 	while (1) {
