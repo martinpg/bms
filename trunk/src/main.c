@@ -1,10 +1,16 @@
+//
+//
+// Main Routine (main loop)
+//
+//
+// @todo implement EEPROM flushing
+
 #include <p18f2680.h>
 #include <adc.h>
 #include <delays.h>
 #include <math.h>
 #include <status.h>
-#include <eeprom.c>
-#include <mymath.c>
+#include <i2c.h>
 
 void init(void);
 void main(void);
@@ -17,12 +23,17 @@ void openRelay(void);
 void closeRelay(void);
 void checkVoltage(float x);
 void interruptHandlerHigh (void);
+void writeWord(unsigned char address, unsigned int x);
+unsigned int readWord(unsigned char address);
+void eepromWrite(unsigned char address, unsigned char x);
+unsigned char eepromRead(unsigned char address);
+unsigned char probeSensors(void);
 //#define samples 	1; // Samples to keep
 
 unsigned int MAX_CELLS = 8;
 unsigned int VRef;
 // const unsigned int samples = 1;
-
+unsigned char EEPROM_START;
 unsigned char CURRENT_CELL;
 unsigned int voltage[8];
 unsigned int temp[8];
@@ -39,13 +50,20 @@ unsigned int CURRENT_THRES	= 0.01; // Amps, Threshold of charge / discharge
 unsigned int REF_LOW_LIMIT = 2.4; // Volts, Reference too low
 unsigned int REF_HI_LIMIT = 2.6; // Volts, Reference too high
 
+unsigned char STATUS_REG;
+unsigned char ERROR_REGL;
+unsigned char ERROR_REGH;
+
 void init(void) {
+	// Initialize clock
+	OSCCON = 0x42;
+	//OSCTUNE = 0x00; // set to 31 kHz
+
 	// Initialize global variables
-	unsigned char i;
 	CURRENT_CELL = 0;
 	STATUS_REG = 0x01; // Operating (>1ma)
 	current = 0;
-	VRef = floatToInt(5.000);
+	VRef = (int)(5.000); // Vdd
 
 	// Set up digital I/O ports
 	TRISA = 0xFF;
@@ -100,8 +118,7 @@ void init(void) {
 }
 
 void main(void) {
-	init();	
-	// @todo check vref to see if its not broken first!
+	init();
 	// Open ADC port looking at VRef+ pin
 	OpenADC(ADC_FOSC_8 & 
 			ADC_RIGHT_JUST &
@@ -110,51 +127,68 @@ void main(void) {
 			ADC_INT_ON &
 			ADC_REF_VDD_VSS, 
 			ADC_15ANA);
-	Delay10TCYx(5); // delay for 50 cycles
+	OpenI2C(MASTER, SLEW_OFF);
+	Delay10TCYx(5); // delay 50 cycles to do A/D
 	ConvertADC();
 	setLED(1);
 	while (BusyADC()); // wait for ADC to complete
 	clearLED(1);
-	if (ReadADC() < REF_LOW_LIMIT || ReadADC() > REF_HI_LIMIT) {
-		// Reference is broken
+	if (ReadADC() > REF_LOW_LIMIT && ReadADC() < REF_HI_LIMIT) {
+		// Reference is good to go; use it.
+		OpenADC(ADC_FOSC_8 &
+				ADC_RIGHT_JUST &
+				ADC_16_TAD,
+				ADC_CH0 &
+				ADC_INT_ON &
+				ADC_REF_VREFPLUS_VSS,
+				ADC_15ANA);
+			Delay10TCYx(5); // delay 50 cyc
+			VRef = 2.5; //int((2.5)*2^16);
+		// @todo change register to operating when it actually starts to
+	} else {
+		// Reference is broken, use VDD
 		STATUS |= SOFT_FAIL;
-		ERROR |= REF_FAIL;
+		ERROR_REGH |= REF_FAIL;
+		VRef = 5.0;
 	}
-	// @todo put vref in eeprom
 
 	while (1) {
 		toggleLED(0); // 1 cycle
-		// ADC_XX_TAD where XX is 20,16,12,8,6,4,2,0 T_ad
-		// OpenADC(ADC_FOSC_RC & ADC_RIGHT_JUST & ADC_20_TAD, ADC_CH0 & ADC_INT_OFF & ADC_VREFPLUS_EXT, 0);
+		/*StartI2C();
+		if (WriteI2C((0b1001 << 3) + (CURRENT_CELL << 1) | 1) == -1) {
+			ERROR_REGH |= TEMP_FAIL;
+		}
+		temp[CURRENT_CELL] = ReadI2C() << 8;
+		AckI2C();
+		temp[CURRENT_CELL] |= ReadI2C();
+		StopI2C();*/
 		if (BusyADC() == 0) {
 			clearLED(1);
 			voltage[CURRENT_CELL] = VRef * ReadADC();
 			increaseCount();
 			setAddress(CURRENT_CELL);
-			// @todo above line or below switch statement
-			switch (CURRENT_CELL) {
-				case 0:
-					SetChanADC(ADC_CH0);
-					break;
-				case 1:
-					SetChanADC(ADC_CH1);
-					break;
-				case 2:
-					SetChanADC(ADC_CH2);
-					break;
-				case 3:
-					SetChanADC(ADC_CH4);
-					break;
-				default:
-					SetChanADC(ADC_CH8);
-					break;
-			}
-			Delay10TCYx(5); // delay after switching
+			Delay10TCYx(1); // delay after switching
 			setLED(1);
 			ConvertADC();
 		}
+		//_asm CLEARWDT _endasm
 	// @todo watchdog and clear it and stuff
 	}
+	//_asm nop _endasm
+	//_asm nop _endasm
+	//_asm nop _endasm
+	//_asm nop _endasm
+	//_asm nop _endasm
+	//_asm nop _endasm
+	//closeRelay(); // should never get here
+}
+
+float intToFloat(int x) {
+	return ((float) x) / (2^10);
+}
+
+int floatToInt(auto float x) {
+	return 0; //@todo
 }
 
 char setOV(float x) {
@@ -221,11 +255,13 @@ void checkTemp(float x) {
 }
 
 void openRelay(void) {
-	PORTB &= 0b11111110;
+	//PORTB &= 0b11111110;
+`	_asm BCF PORTB, 0, 0 _endasm
 }
 
 void closeRelay(void) {
-	PORTB |= 0b00000001;
+	//PORTB |= 0b00000001;
+	_asm BSF PORTB, 0, 0 _endasm
 }
 
 void setAddress(unsigned char address) {
@@ -245,11 +281,11 @@ void increaseCount(void) {
 }
 
 void setLED(unsigned char led) {
-	PORTC = PORTC | (1 << led);
+	PORTC |= (1 << led);
 }
 
 void clearLED(unsigned char led) {
-	PORTC = PORTC & (0 << led);
+	PORTC &= ~(1 << led);
 }
 
 void toggleLED(unsigned char led) {
@@ -258,6 +294,55 @@ void toggleLED(unsigned char led) {
 	} else {
 		setLED(led);
 	}
+}
+
+void writeWord(unsigned char address, unsigned int x) {
+	unsigned char *ptr = &x;
+	char i;
+	for (i = 0; i < 2; i++) {
+		eepromWrite(address++,*(ptr++));
+	}
+}
+
+unsigned int readWord(unsigned char address) {
+	unsigned int result;
+	unsigned char *ptr = &result;
+	char i;
+	for (i = 0; i < 2; i++) {
+		*(ptr++)=eepromRead(address++);
+	}
+	return result;
+}
+
+unsigned char eepromRead(unsigned char address) {
+	EEADRH = 0;
+ 	EEADR = address;
+	EECON1 |= 0x01; // read
+	while (EECON1bits.RD == 1);
+	return EEDATA;
+}
+
+void eepromWrite(unsigned char address, unsigned char x) {
+	char oldGIE = INTCONbits.GIE;
+	EECON1bits.WRERR = 0; // clear error
+	PIR2bits.EEIF = 0; // clear write done flag
+	EEADRH = 0;
+	EEADR = address;
+	EEDATA = x;
+	EECON1bits.EEPGD = 0;
+	EECON1bits.CFGS = 0;
+	EECON1bits.WREN = 1;
+	INTCONbits.GIE = 0;	// disable interrupts
+	EECON2 = 0x55;
+	EECON2 = 0xAA;
+	EECON1bits.WR = 1; // write
+	while (PIR2bits.EEIF == 0);// wait to complete
+	if (EECON1bits.WRERR) {
+		ERROR_REGH |= READ_FAIL;
+		STATUS_REG |= SOFT_FAIL;
+	}
+	EECON1bits.WREN = 0; // disable writes
+	INTCONbits.GIE = 0x01 & oldGIE;
 }
 
 #pragma code interruptVectorHigh = 0x08
@@ -272,7 +357,7 @@ void interruptVectorHigh (void) {
 void interruptHandlerHigh(void) {
 	if (PIR2bits.OSCFIF) {
 		STATUS_REG |= SOFT_FAIL;
-		ERROR |= OSC_FAIL;
+		ERROR_REGH |= OSC_FAIL;
 		PIR2bits.OSCFIF = 0;
 		// clear?
 	} else if (PIR1bits.ADIF) {
