@@ -19,7 +19,6 @@
 #define FAIL		0x02;
 #define SOFT_FAIL	0x08;
 
-unsigned char STATUS_REG, ERROR_REGL, ERROR_REGH;
 
 // ERROR_REGL
 //     0 - Undervoltage
@@ -43,7 +42,7 @@ unsigned char STATUS_REG, ERROR_REGL, ERROR_REGH;
 //     1 - Oscillator Failure
 //     2 - EEPROM Read Failure
 //     3 - Voltage Reference Failure
-//     4 - RESERVED
+//     4 - Temperature Sensor Failure
 //     5 - RESERVED
 //     6 - RESERVED
 //     7 - RESERVED
@@ -51,3 +50,4 @@ unsigned char STATUS_REG, ERROR_REGL, ERROR_REGH;
 #define OSC_FAIL		0x01;
 #define READ_FAIL		0x02;
 #define REF_FAIL		0x04;
+#define TEMP_FAIL		0x08;
