@@ -66,9 +66,10 @@ void init(void) {
 	VRef = (int)(5.000); // Vdd
 
 	// Set up digital I/O ports
-	TRISA = 0xFF;
-	TRISB &= 0x1E; // Use B[5..7] for address bits, B[0] for relay
-	TRISC &= 0xF0; // Use C[0..3] for LEDs
+	TRISA = 0xCB;
+	TRISB &= 0xC9;
+	TRISC &= 0x80;
+	
 	setAddress(0);
 
 	// Set up interrupts
@@ -256,19 +257,21 @@ void checkTemp(float x) {
 
 void openRelay(void) {
 	//PORTB &= 0b11111110;
-`	_asm BCF PORTB, 0, 0 _endasm
+  //PORTC &= 0b11011111;
+	_asm BCF PORTB, 6, 0 _endasm
 }
 
 void closeRelay(void) {
-	//PORTB |= 0b00000001;
-	_asm BSF PORTB, 0, 0 _endasm
+	//PORTB |= 0b00100000;
+	_asm BSF PORTB, 6, 0 _endasm
 }
 
 void setAddress(unsigned char address) {
 	if (address < MAX_CELLS) {
-		PORTB = (PORTB & 0x1F) | (address << 5);
+		PORTC = (PORTC & 0x07) | address;
 	} else {
 		setAddress(0);
+		// @todo shouldn't get here (improper call), generate error?
 	}
 }
 
@@ -281,15 +284,15 @@ void increaseCount(void) {
 }
 
 void setLED(unsigned char led) {
-	PORTC |= (1 << led);
+  PORTA |= 1 << (led + 4);
 }
 
 void clearLED(unsigned char led) {
-	PORTC &= ~(1 << led);
+	PORTA &= ~(1 << (led + 4));
 }
 
 void toggleLED(unsigned char led) {
-	if (PORTC & (1 << led)) { // if on, turn off
+	if (PORTA & (1 << (led + 4))) { // if on, turn off
 		clearLED(led);
 	} else {
 		setLED(led);
