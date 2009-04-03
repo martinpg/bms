@@ -10,45 +10,63 @@
 #include <delays.h>
 #include <math.h>
 #include <status.h>
+//#include <stdlib.h>
 #include <i2c.h>
 
 void init(void);
 void main(void);
 void setAddress(unsigned char address);
-void toggleLED(unsigned char led);
-void setLED(unsigned char led);
-void clearLED(unsigned char led);
+void toggleRedLED(void);
+void setRedLED(void);
+void clearRedLED(void);
+void toggleGreenLED(void);
+void setGreenLED(void);
+void clearGreenLED(void);
 void increaseCount(void);
 void openRelay(void);
 void closeRelay(void);
-void checkVoltage(float x);
+void checkVoltage(int x);
 void interruptHandlerHigh (void);
 void writeWord(unsigned char address, unsigned int x);
 unsigned int readWord(unsigned char address);
 void eepromWrite(unsigned char address, unsigned char x);
 unsigned char eepromRead(unsigned char address);
-unsigned char probeSensors(void);
-//#define samples 	1; // Samples to keep
+void initEEPROM(void);
+//unsigned char readByteI2C(unsigned char controlByte, unsigned char address, unsigned char* data, unsigned char length);
+//void writeByteI2C(unsigned char controlByte, unsigned char address, unsigned char data);
+void readTemp(unsigned char address, int *data);
+void initTemps(void);
+
+#define TEMP_CONTROL_REG	0x00;
+#define ADC_RESOLUTION		1024;
+#define	VDD					5000; // mV
+#define VREF_DEFAULT		3300; // mV
 
 unsigned int MAX_CELLS = 8;
 unsigned int VRef;
-// const unsigned int samples = 1;
-unsigned char EEPROM_START;
+unsigned char EEPROM_OFFSET;
 unsigned char CURRENT_CELL;
 unsigned int voltage[8];
 unsigned int temp[8];
-unsigned int current;
+signed int current;
 
 // Default set points (saved to EEPROM if erased)
-unsigned int OVERVOLT_LIMIT = 4.2; // Overvoltage setpoint (volts)
-unsigned int UNDERVOLT_LIMIT = 3.0; // Undervoltage setpoint (volts)
-unsigned int DISCHG_RATE_LIMIT = 6.0; // Overcurrent (discharge) setpoint (amps)
-unsigned int CHARGE_RATE_LIMIT = 6.0; // Overcurrent (charge) setpoint (amps)
-unsigned int TEMP_DISCHG_LIMIT = 85.0; // Max discharge temperature
-unsigned int TEMP_CHARGE_LIMIT = 60.0; // Max charge temperature
-unsigned int CURRENT_THRES	= 0.01; // Amps, Threshold of charge / discharge
-unsigned int REF_LOW_LIMIT = 2.4; // Volts, Reference too low
-unsigned int REF_HI_LIMIT = 2.6; // Volts, Reference too high
+unsigned int OVERVOLT_LIMIT = (int)4200; // Overvoltage setpoint (mV)
+unsigned int UNDERVOLT_LIMIT = (int)3000; // Undervoltage setpoint (mV)
+unsigned int DISCHG_RATE_LIMIT = (int)6000; // Overcurrent (discharge) setpoint (mA)
+unsigned int CHARGE_RATE_LIMIT = (int)3000; // Overcurrent (charge) setpoint (mA)
+unsigned int TEMP_DISCHG_LIMIT = (int)358; // Max discharge temperature (Kelvin)
+unsigned int TEMP_CHARGE_LIMIT = (int)333; // Max charge temperature (Kelvin)
+unsigned int CURRENT_THRES	= (int)10; // mA, Threshold of charge / discharge
+unsigned int REF_LOW_LIMIT = (int)2400; // mV, Reference too low
+unsigned int REF_HI_LIMIT = (int)2600; // mV, Reference too high
+
+// Voltage input stage calibration factors
+int gv[8] = {1, 1, 1, 1, 1, 1, 1, 1}; // gain
+int bv[8] = {0, 0, 0, 0, 0, 0, 0, 0}; // bias
+// Current input calibration factors
+unsigned int gi = 200; // mA/V
+unsigned int bi = 2500; // mV Q-point
 
 unsigned char STATUS_REG;
 unsigned char ERROR_REGL;
@@ -57,20 +75,40 @@ unsigned char ERROR_REGH;
 void init(void) {
 	// Initialize clock
 	OSCCON = 0x42;
+	//SSPADD = 0x13;
 	//OSCTUNE = 0x00; // set to 31 kHz
 
 	// Initialize global variables
 	CURRENT_CELL = 0;
 	STATUS_REG = 0x01; // Operating (>1ma)
 	current = 0;
-	VRef = (int)(5.000); // Vdd
+	VRef = VDD; // Vdd
 
 	// Set up digital I/O ports
+
+	// 		PORTA:	0 - MUX Output
+	//				1 - Current Sensor Output
+	//				3 - Voltage Reference (+3.3V)
+	//				2,4,5 - N.C.
+	//				6,7 - Clock
 	TRISA = 0xCB;
-	TRISB &= 0xC9;
-	TRISC &= 0x80;
-	
-	setAddress(0);
+
+	//		PORTB:	0 - LED0
+	//				1 - LED1
+	//				2 - CANTX
+	//				3 - CANRX
+	//				4-7 - N.C.
+	TRISB &= 0x08;
+
+	//		PORTC:	0 - Address bit 0
+	//				1 - Address bit 1
+	//				2 - Address bit 2
+	//				3 - I2C SCL clock
+	//				4 - I2C SDA data
+	//				5 - Relay Enable (active high)
+	//				6 - Serial TX
+	//				7 - Serial RX
+	TRISC &= 0x98;
 
 	// Set up interrupts
 	INTCON = 0x4; // Disable global interrupt, enables peripheral interrupt
@@ -83,43 +121,66 @@ void init(void) {
 	INTCONbits.GIE = 0;
 	// @todo clear all interrupts?
 
+	// Set up I2C bus
+	SSPSTAT = 0x80; // Disable SMBus & slew rate control
+	SSPCON1 = 0x28; // Enable MSSP Master
+	SSPADD = 0x18; // 100kHz
+	SSPCON2 = 0x00; // Clear MSSP Control Bits
+}
+
+void initEEPROM(void) {
+	unsigned char i;
 	// Set up EEPROM
-	EEPROM_START = eepromRead(0x00);
-	
-	if (EEPROM_START == 0xFF || EEPROM_START == 0) {
+	EEPROM_OFFSET = eepromRead(0x00);
+	if (EEPROM_OFFSET == 0xFF || EEPROM_OFFSET == 0x00) {
 		// Setting up EEPROM for the first time
-		writeWord(0x01, UNDERVOLT_LIMIT);
-		writeWord(0x03, OVERVOLT_LIMIT);
-		writeWord(0x05, CHARGE_RATE_LIMIT);
-		writeWord(0x07, DISCHG_RATE_LIMIT);
-		writeWord(0x09, TEMP_CHARGE_LIMIT);
-		writeWord(0x0B, TEMP_DISCHG_LIMIT);
-		writeWord(0x0D, CURRENT_THRES);
-		writeWord(0x0F, REF_LOW_LIMIT);
-		writeWord(0x11, REF_HI_LIMIT);
-		EEPROM_START = 0x13;
-		eepromWrite(0x00, EEPROM_START);
+		EEPROM_OFFSET = 0x01;
+		writeWord((EEPROM_OFFSET+=sizeof(UNDERVOLT_LIMIT)), UNDERVOLT_LIMIT);
+		writeWord((EEPROM_OFFSET+=sizeof(OVERVOLT_LIMIT)), OVERVOLT_LIMIT);
+		writeWord((EEPROM_OFFSET+=sizeof(CHARGE_RATE_LIMIT)), CHARGE_RATE_LIMIT);
+		writeWord((EEPROM_OFFSET+=sizeof(DISCHG_RATE_LIMIT)), DISCHG_RATE_LIMIT);
+		writeWord((EEPROM_OFFSET+=sizeof(TEMP_CHARGE_LIMIT)), TEMP_CHARGE_LIMIT);
+		writeWord((EEPROM_OFFSET+=sizeof(TEMP_DISCHG_LIMIT)), TEMP_DISCHG_LIMIT);
+		writeWord((EEPROM_OFFSET+=sizeof(CURRENT_THRES)), CURRENT_THRES);
+		writeWord((EEPROM_OFFSET+=sizeof(REF_LOW_LIMIT)), REF_LOW_LIMIT);
+		writeWord((EEPROM_OFFSET+=sizeof(REF_HI_LIMIT)), REF_HI_LIMIT);
+		for (i = 0; i < MAX_CELLS; i++) {
+			writeWord((EEPROM_OFFSET+=sizeof(gv[i])), gv[i]);
+			writeWord((EEPROM_OFFSET+=sizeof(bv[i])), bv[i]);
+		}
+		eepromWrite(0x00, EEPROM_OFFSET);
 	} else {
-		eepromWrite(0x00, EEPROM_START);
-		UNDERVOLT_LIMIT = readWord(0x01);
-		OVERVOLT_LIMIT = readWord(0x03);
-		CHARGE_RATE_LIMIT = readWord(0x05);
-		DISCHG_RATE_LIMIT = readWord(0x07);
-		TEMP_CHARGE_LIMIT = readWord(0x09);
-		TEMP_DISCHG_LIMIT = readWord(0x0B);
-		CURRENT_THRES = readWord(0x0D);
-		REF_LOW_LIMIT = readWord(0x0F);
-		REF_HI_LIMIT = readWord(0x11);
+		//eepromWrite(0x00, EEPROM_OFFSET);
+		UNDERVOLT_LIMIT = readWord(EEPROM_OFFSET);
+		OVERVOLT_LIMIT = readWord(EEPROM_OFFSET+=sizeof(UNDERVOLT_LIMIT));
+		CHARGE_RATE_LIMIT = readWord(EEPROM_OFFSET+=sizeof(OVERVOLT_LIMIT));
+		DISCHG_RATE_LIMIT = readWord(EEPROM_OFFSET+=sizeof(CHARGE_RATE_LIMIT));
+		TEMP_CHARGE_LIMIT = readWord(EEPROM_OFFSET+=sizeof(DISCHG_RATE_LIMIT));
+		TEMP_DISCHG_LIMIT = readWord(EEPROM_OFFSET+=sizeof(TEMP_CHARGE_LIMIT));
+		CURRENT_THRES = readWord(EEPROM_OFFSET+=sizeof(TEMP_DISCHG_LIMIT));
+		REF_LOW_LIMIT = readWord(EEPROM_OFFSET+=sizeof(CURRENT_THRES));
+		REF_HI_LIMIT = readWord(EEPROM_OFFSET+=sizeof(REF_LOW_LIMIT));
+		gi = readWord(EEPROM_OFFSET+=sizeof(REF_HI_LIMIT));
+		bi = readWord(EEPROM_OFFSET+=sizeof(gi));
+		EEPROM_OFFSET += sizeof(bi);
+		for (i = 0; i < MAX_CELLS; i++) {
+			gv[i] = readWord(EEPROM_OFFSET);
+			EEPROM_OFFSET += sizeof(gv[i]);
+			bv[i] = readWord(EEPROM_OFFSET);
+			EEPROM_OFFSET += sizeof(bv[i]);
+		}
 	}
 
 	// Enable High / Low voltage detect (for Vdd)
 	//HLVDCON = 0x3E; // 4.48V - 4.69V brownout, interrupt enabled
 
-	// enable communications busses, store last reset (RCON), etc
+	// @todo enable communications busses, store last reset (RCON), etc
 }
 
 void main(void) {
 	init();
+	setRedLED();
+	initEEPROM();
 	// Open ADC port looking at VRef+ pin
 	OpenADC(ADC_FOSC_8 & 
 			ADC_RIGHT_JUST &
@@ -129,11 +190,9 @@ void main(void) {
 			ADC_REF_VDD_VSS, 
 			ADC_15ANA);
 	OpenI2C(MASTER, SLEW_OFF);
-	Delay10TCYx(5); // delay 50 cycles to do A/D
+	initTemps();
 	ConvertADC();
-	setLED(1);
 	while (BusyADC()); // wait for ADC to complete
-	clearLED(1);
 	if (ReadADC() > REF_LOW_LIMIT && ReadADC() < REF_HI_LIMIT) {
 		// Reference is good to go; use it.
 		OpenADC(ADC_FOSC_8 &
@@ -143,38 +202,43 @@ void main(void) {
 				ADC_INT_ON &
 				ADC_REF_VREFPLUS_VSS,
 				ADC_15ANA);
-			Delay10TCYx(5); // delay 50 cyc
-			VRef = 2.5; //int((2.5)*2^16);
+			//Delay10TCYx(5); // delay 50 cyc
+			VRef = VREF_DEFAULT;
+			clearRedLED();
 		// @todo change register to operating when it actually starts to
 	} else {
 		// Reference is broken, use VDD
+		OpenADC(ADC_FOSC_8 &
+				ADC_RIGHT_JUST &
+				ADC_16_TAD,
+				ADC_CH0 &
+				ADC_INT_ON &
+				ADC_REF_VDD_VSS,
+				ADC_15ANA);
 		STATUS |= SOFT_FAIL;
 		ERROR_REGH |= REF_FAIL;
-		VRef = 5.0;
+		VRef = floatToInt(5.0);
+		clearRedLED(); // debug
 	}
-
+	setGreenLED();
+	//unsigned char count = 0;
 	while (1) {
-		toggleLED(0); // 1 cycle
-		/*StartI2C();
-		if (WriteI2C((0b1001 << 3) + (CURRENT_CELL << 1) | 1) == -1) {
-			ERROR_REGH |= TEMP_FAIL;
-		}
-		temp[CURRENT_CELL] = ReadI2C() << 8;
-		AckI2C();
-		temp[CURRENT_CELL] |= ReadI2C();
-		StopI2C();*/
+		// @todo schedule ADC to do current more often than voltage (interrupts?)
+		readTemp(CURRENT_CELL, &temp[CURRENT_CELL]); // I2C still broken!
+		//checkTemp(temp[CURRENT_CELL]);
 		if (BusyADC() == 0) {
-			clearLED(1);
-			voltage[CURRENT_CELL] = VRef * ReadADC();
-			increaseCount();
-			setAddress(CURRENT_CELL);
-			Delay10TCYx(1); // delay after switching
-			setLED(1);
-			ConvertADC();
-		}
+				clearRedLED();
+				voltage[CURRENT_CELL] = ReadADC();
+				increaseCount();
+				setAddress(CURRENT_CELL);
+				Delay10TCYx(5); // delay after switching
+				ConvertADC();
+				setRedLED();
+		}	
+	}
 		//_asm CLEARWDT _endasm
 	// @todo watchdog and clear it and stuff
-	}
+	// NOP sled:
 	//_asm nop _endasm
 	//_asm nop _endasm
 	//_asm nop _endasm
@@ -184,12 +248,76 @@ void main(void) {
 	//closeRelay(); // should never get here
 }
 
-float intToFloat(int x) {
-	return ((float) x) / (2^10);
+void initTemps(void) {
+	unsigned char i;
+	for (i = 0; i < MAX_CELLS; i++) {
+		IdleI2C();
+		StartI2C();
+		while (SSPCON2bits.SEN);
+		WriteI2C(0x90 | i << 1);
+		IdleI2C();
+		WriteI2C(0x01); // select CONFIG register
+		IdleI2C();
+		WriteI2C(0x60); // set resolution to maximum
+		IdleI2C();
+		WriteI2C(0x60);
+		IdleI2C();
+		StopI2C();
+		while (SSPCON2bits.PEN);
+	}
+}
+
+void readTemp(unsigned char address, int *data) {
+	IdleI2C();	// make sure bus is idle
+	StartI2C();	// initiate START bus condition
+	while (SSPCON2bits.SEN); // poll until done (@todo waste of time)
+	WriteI2C(0x90 | address  << 1);
+	IdleI2C();
+	WriteI2C(0x00); // Ta Register
+	IdleI2C();
+	StopI2C();
+	IdleI2C();
+	StartI2C();
+	while(SSPCON2bits.SEN);
+	WriteI2C(0x91 | address << 1); // READ
+	IdleI2C();
+	getsI2C(data, 1); // grab length bytes from bus
+	AckI2C();
+	getsI2C(data++, 1);
+	NotAckI2C(); // send EOD bus condition
+	while (SSPCON2bits.ACKEN);
+	StopI2C();
+	while (SSPCON2bits.PEN);
+}
+
+void writeByteI2C(unsigned char controlByte, unsigned char address, unsigned char data) {
+	IdleI2C(); // make sure bus is idle
+	StartI2C(); // initiate START bus condition
+	while ( SSPCON2bits.SEN ); // wait until start condition is over 
+	WriteI2C( controlByte ); // write 1 byte - R/W bit should be 0
+	IdleI2C(); // ensure module is idle
+	WriteI2C(0%1001 << 3 | address); // write address byte to EEPROM
+	IdleI2C(); // ensure module is idle
+	WriteI2C ( data );// Write data byte to EEPROM
+	IdleI2C();                          // ensure module is idle
+	StopI2C();                          // send STOP condition
+	while ( SSPCON2bits.PEN );          // wait until stop condition is over 
+	while (EEAckPolling(controlByte));  //Wait for write cycle to complete
+}
+
+float intToFloat(int x, unsigned int shift) {
+	// shift is where the decimal occurs (ie 1 represents to the left of the ones place)
+	float result = 0;
+	char i;
+	for (i = 0; i < 16; i++) {
+		result += pow(2, i - shift) * (x & (0x01 << i));
+	}
+	return result;
 }
 
 int floatToInt(auto float x) {
-	return 0; //@todo
+	//return x * ADC_RESOLUTION / intToFloat(Vref);
+	return (int) x;
 }
 
 char setOV(float x) {
@@ -225,7 +353,7 @@ char setOD(float x) {
 	return 1;
 }
 
-void checkVoltage(float x) {
+void checkVoltage(int x) {
 	if (x > OVERVOLT_LIMIT) {
 		STATUS_REG |= FAIL;
 		openRelay();
@@ -235,7 +363,7 @@ void checkVoltage(float x) {
 	}
 }
 
-void checkCurrent(float x) {
+void checkCurrent(int x) {
 	if (x < CHARGE_RATE_LIMIT) {
 		STATUS_REG |= FAIL;
 		openRelay();
@@ -245,7 +373,7 @@ void checkCurrent(float x) {
 	}
 }
 
-void checkTemp(float x) {
+void checkTemp(int x) {
 	if (x > TEMP_CHARGE_LIMIT) {
 		STATUS_REG |= FAIL;
 		openRelay();
@@ -257,14 +385,10 @@ void checkTemp(float x) {
 
 void openRelay(void) {
 	//PORTB &= 0b11111110;
-  //PORTC &= 0b11011111;
-	_asm BCF PORTB, 6, 0 _endasm
-}
+`	//_asm BCF PORTB, 0, 0 _endasm	PORTC &= 0%11011111;}
 
 void closeRelay(void) {
-	//PORTB |= 0b00100000;
-	_asm BSF PORTB, 6, 0 _endasm
-}
+	//PORTB |= 0b00000001;	//_asm BSF PORTB, 0, 0 _endasm	PORTC |= 0%00100000;}
 
 void setAddress(unsigned char address) {
 	if (address < MAX_CELLS) {
@@ -283,19 +407,20 @@ void increaseCount(void) {
 	}
 }
 
-void setLED(unsigned char led) {
-  PORTA |= 1 << (led + 4);
+void setGreenLED() {	PORTB |= 0x01;}
+
+void setRedLED() {	PORTB |= 0x02;}
+
+void clearGreenLED() {	PORTB &= 0xFE;}void clearRedLED() {	PORTB &= 0xFD;}void toggleGreenLED() {	if (PORTB & 0x01) {		clearGreenLED();	} else {
+		setGreenLED();
+	}
 }
 
-void clearLED(unsigned char led) {
-	PORTA &= ~(1 << (led + 4));
-}
-
-void toggleLED(unsigned char led) {
-	if (PORTA & (1 << (led + 4))) { // if on, turn off
-		clearLED(led);
+void toggleRedLED() {
+	if (PORTB & 0x02 >> 1) {
+		clearRedLED();
 	} else {
-		setLED(led);
+		setRedLED();
 	}
 }
 
