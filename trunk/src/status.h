@@ -23,20 +23,21 @@
 // ERROR_REGL
 //     0 - Undervoltage
 //     1 - Overvoltage
-//     2 - Overcurrent 
-//     3 - Overtemperature
-//     4 - 5V Brownout (@todo unimplemented)
-//     5 - Unbalanced (@todo unimplemented)
-//     6 - Remote shutdown (@todo unimplemented)
-//     7 - RESERVED
+//     2 - Overcurrent (charging)
+//     3 - Overcurrent (discharging)
+//     4 - Overtemperature
+//     5 - 5V Brownout (@todo unimplemented)
+//     6 - Unbalanced (@todo unimplemented)
+//     7 - Remote shutdown (@todo unimplemented)
 
 #define UNDERVOLT		0x01;
 #define OVERVOLT		0x02;
-#define OVERCURRENT		0x04; 
-#define OVERTEMP		0x08;
-#define	BROWNOUT		0x10;
-#define UNBALANCED		0x20;
-#define REMOTE_SHDN		0x40;
+#define OVERCURRENTIN	0x04;
+#define OVERCURRENTOUT	0x08;
+#define OVERTEMP		0x10;
+#define	BROWNOUT		0x20;
+#define UNBALANCED		0x40;
+#define REMOTE_SHDN		0x80;
 
 // ERROR_REGH
 //     1 - Oscillator Failure
