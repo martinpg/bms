@@ -1,4 +1,4 @@
-//
+ //
 //
 // Main Routine (main loop)
 //
@@ -10,8 +10,9 @@
 #include <delays.h>
 #include <math.h>
 #include <status.h>
-//#include <stdlib.h>
 #include <i2c.h>
+#include <stdlib.h>
+#include <UARTIntC.h>
 
 void init(void);
 void main(void);
@@ -32,8 +33,6 @@ unsigned int readWord(unsigned char address);
 void eepromWrite(unsigned char address, unsigned char x);
 unsigned char eepromRead(unsigned char address);
 void initEEPROM(void);
-//unsigned char readByteI2C(unsigned char controlByte, unsigned char address, unsigned char* data, unsigned char length);
-//void writeByteI2C(unsigned char controlByte, unsigned char address, unsigned char data);
 void readTemp(unsigned char address, int *data);
 void initTemps(void);
 
@@ -74,7 +73,10 @@ unsigned char ERROR_REGH;
 
 void init(void) {
 	// Initialize clock
-	OSCCON = 0x42;
+	// OSCCON<6:4>=111 or 110
+	// FOSC3:FOSC0=1001 or 1000
+	// 0b111100?0
+	OSCCON = 0xF2;
 	//SSPADD = 0x13;
 	//OSCTUNE = 0x00; // set to 31 kHz
 
@@ -221,10 +223,11 @@ void main(void) {
 		clearRedLED(); // debug
 	}
 	setGreenLED();
-	//unsigned char count = 0;
+	UARTIntInit(); // debug
 	while (1) {
 		// @todo schedule ADC to do current more often than voltage (interrupts?)
 		readTemp(CURRENT_CELL, &temp[CURRENT_CELL]); // I2C still broken!
+		
 		//checkTemp(temp[CURRENT_CELL]);
 		if (BusyADC() == 0) {
 				clearRedLED();
@@ -234,7 +237,8 @@ void main(void) {
 				Delay10TCYx(5); // delay after switching
 				ConvertADC();
 				setRedLED();
-		}	
+		}
+		UARTIntPutChar('X');
 	}
 		//_asm CLEARWDT _endasm
 	// @todo watchdog and clear it and stuff
@@ -248,6 +252,10 @@ void main(void) {
 	//closeRelay(); // should never get here
 }
 
+//void writeSCI(int x) {
+	//while(UARTIntPutChar(itoa(x)));
+//}
+
 void initTemps(void) {
 	unsigned char i;
 	for (i = 0; i < MAX_CELLS; i++) {
@@ -259,8 +267,6 @@ void initTemps(void) {
 		WriteI2C(0x01); // select CONFIG register
 		IdleI2C();
 		WriteI2C(0x60); // set resolution to maximum
-		IdleI2C();
-		WriteI2C(0x60);
 		IdleI2C();
 		StopI2C();
 		while (SSPCON2bits.PEN);
@@ -275,15 +281,11 @@ void readTemp(unsigned char address, int *data) {
 	IdleI2C();
 	WriteI2C(0x00); // Ta Register
 	IdleI2C();
-	StopI2C();
-	IdleI2C();
 	StartI2C();
 	while(SSPCON2bits.SEN);
 	WriteI2C(0x91 | address << 1); // READ
 	IdleI2C();
-	getsI2C(data, 1); // grab length bytes from bus
-	AckI2C();
-	getsI2C(data++, 1);
+	getsI2C(data, 2); // grab length bytes from bus
 	NotAckI2C(); // send EOD bus condition
 	while (SSPCON2bits.ACKEN);
 	StopI2C();
@@ -384,11 +386,14 @@ void checkTemp(int x) {
 }
 
 void openRelay(void) {
-	//PORTB &= 0b11111110;
-`	//_asm BCF PORTB, 0, 0 _endasm	PORTC &= 0%11011111;}
+`	//_asm BCF PORTB, 0, 0 _endasm	
+	PORTC &= 0%11011111;
+}
 
 void closeRelay(void) {
-	//PORTB |= 0b00000001;	//_asm BSF PORTB, 0, 0 _endasm	PORTC |= 0%00100000;}
+	//_asm BSF PORTB, 0, 0 _endasm	
+	PORTC |= 0%00100000;
+}
 
 void setAddress(unsigned char address) {
 	if (address < MAX_CELLS) {
@@ -407,17 +412,32 @@ void increaseCount(void) {
 	}
 }
 
-void setGreenLED() {	PORTB |= 0x01;}
+void setGreenLED() {
+	PORTB |= 0x01;
+}
 
-void setRedLED() {	PORTB |= 0x02;}
+void setRedLED() {
+	PORTB |= 0x02;
+}
 
-void clearGreenLED() {	PORTB &= 0xFE;}void clearRedLED() {	PORTB &= 0xFD;}void toggleGreenLED() {	if (PORTB & 0x01) {		clearGreenLED();	} else {
+void clearGreenLED() {	
+	PORTB &= 0xFE;
+}
+
+void clearRedLED() {
+	PORTB &= 0xFD;
+}
+
+void toggleGreenLED() {
+	if (PORTB & 0x01) {
+		clearGreenLED();	
+	} else {
 		setGreenLED();
 	}
 }
 
 void toggleRedLED() {
-	if (PORTB & 0x02 >> 1) {
+	if ((PORTB & 0x02) >> 1) {
 		clearRedLED();
 	} else {
 		setRedLED();
@@ -425,6 +445,7 @@ void toggleRedLED() {
 }
 
 void writeWord(unsigned char address, unsigned int x) {
+	// @todo make this more robust -- not only taking ints, use sizeof
 	unsigned char *ptr = &x;
 	char i;
 	for (i = 0; i < 2; i++) {
@@ -473,14 +494,23 @@ void eepromWrite(unsigned char address, unsigned char x) {
 	INTCONbits.GIE = 0x01 & oldGIE;
 }
 
-#pragma code interruptVectorHigh = 0x08
+void low_isr(void);
 
-void interruptVectorHigh (void) {
-	_asm goto interruptHandlerHigh _endasm
+// serial interrupt taken as low priority interrupt
+#pragma code uart_int_service = 0x08
+void uart_int_service(void)
+{
+	_asm	goto low_isr	_endasm
+	
 }
-
 #pragma code
-#pragma interrupt interruptHandlerHigh save
+
+#pragma	interruptlow low_isr save=section(".tmpdata")
+void low_isr(void)
+{	
+	// call of library module function, MUST
+	UARTIntISR();
+}
 
 void interruptHandlerHigh(void) {
 	if (PIR2bits.OSCFIF) {
