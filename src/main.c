@@ -60,6 +60,7 @@ void initEEPROM(void);
 void readTemp(unsigned char address, int *data);
 void initTemps(void);
 void reset(void);
+void failTemp(void);
 
 unsigned int VRef;
 unsigned char EEPROM_OFFSET;
@@ -70,6 +71,7 @@ signed int current;
 unsigned char STATUS_REG;
 unsigned char ERROR_REGL;
 unsigned char ERROR_REGH;
+unsigned char tempFailCount;
 
 // Default set points (saved to EEPROM if erased)
 unsigned int OVERVOLT_LIMIT = 4200; // Overvoltage setpoint (mV)
@@ -81,6 +83,7 @@ unsigned int TEMP_CHARGE_LIMIT = 333; // Max charge temperature (Kelvin)
 unsigned int CURRENT_THRES	= 10; // Threshold of charge / discharge (mA)
 unsigned int REF_LOW_LIMIT = 2400; // Reference too low (mV)
 unsigned int REF_HI_LIMIT = 2600; // Reference too high (mV)
+unsigned int MAX_TEMP_FAIL = 2; // failures tolerated
 
 // Voltage input stage calibration factors
 float gv[MAX_CELLS]; // gain (V/V)
@@ -133,7 +136,7 @@ void init(void) {
 	TRISC = 0x98;
 
 	// Set up interrupts
-	INTCON = 0x4; // Disable global interrupt, enables peripheral interrupt
+	INTCON = 0x04; // Disable global interrupt, enables peripheral interrupt
 	INTCON2 = 0x00;
 	RCONbits.IPEN = 0; // disable priority interrupts
 	PIE1 = 0x00;
@@ -143,11 +146,11 @@ void init(void) {
 	// @todo clear all interrupts?
 
 	// Set up I2C bus
-	SSPSTAT = 0x80; // Disable SMBus & slew rate control
+	/*SSPSTAT = 0x80; // Disable SMBus & slew rate control
 	SSPCON1 = 0x28; // Enable MSSP Master
 	SSPADD = 0x18; // 100kHz
 	SSPCON2 = 0x00; // Clear MSSP Control Bits
-
+	*/
 	// Initialize default cal factor arrays
 	for (i = 0; i < MAX_CELLS; i++) {
 		gv[i] = 1; // gain V/V
@@ -174,7 +177,7 @@ void initEEPROM(void) {
 		writeWord((EEPROM_OFFSET+=sizeof(REF_LOW_LIMIT)), REF_LOW_LIMIT);
 		writeWord((EEPROM_OFFSET+=sizeof(REF_HI_LIMIT)), REF_HI_LIMIT);
 		for (i = 0; i < MAX_CELLS; i++) {
-			writeWord((EEPROM_OFFSET+=sizeof(gv[i])), gv[i]);
+			writeWord((EEPROM_OFFSET+=sizeof(gv[i])), gv[i]); // @todo cannot accept floats
 			writeWord((EEPROM_OFFSET+=sizeof(bv[i])), bv[i]);
 		}
 		eepromWrite(0x00, EEPROM_OFFSET);
@@ -189,11 +192,12 @@ void initEEPROM(void) {
 		CURRENT_THRES = readWord(EEPROM_OFFSET+=sizeof(TEMP_DISCHG_LIMIT));
 		REF_LOW_LIMIT = readWord(EEPROM_OFFSET+=sizeof(CURRENT_THRES));
 		REF_HI_LIMIT = readWord(EEPROM_OFFSET+=sizeof(REF_LOW_LIMIT));
-		gi = readWord(EEPROM_OFFSET+=sizeof(REF_HI_LIMIT));
+		gi = readWord(EEPROM_OFFSET+=sizeof(REF_HI_LIMIT)) << 8 |
+			readWord(EEPROM_OFFSET+=sizeof(REF_HI_LIMIT) + 1);
 		bi = readWord(EEPROM_OFFSET+=sizeof(gi));
 		EEPROM_OFFSET += sizeof(bi);
 		for (i = 0; i < MAX_CELLS; i++) {
-			gv[i] = readWord(EEPROM_OFFSET);
+			gv[i] = readWord(EEPROM_OFFSET) << 8 | readWord(EEPROM_OFFSET+1);
 			EEPROM_OFFSET += sizeof(gv[i]);
 			bv[i] = readWord(EEPROM_OFFSET);
 			EEPROM_OFFSET += sizeof(bv[i]);
@@ -209,7 +213,7 @@ void initEEPROM(void) {
 void main(void) {
 	init();
 	setRedLED();
-	initEEPROM();
+	//initEEPROM();
 
 	// Open ADC port looking at VRef+ pin
 	OpenADC(ADC_FOSC_8 & 
@@ -304,32 +308,57 @@ void initTemps(void) {
 void readTemp(unsigned char address, int *data) {
 	IdleI2C();	// make sure bus is idle
 	StartI2C();	// initiate START bus condition
-	while (SSPCON2bits.SEN); // poll until done (@todo waste of time)
+	while (SSPCON2bits.SEN) {
+		// wait for a time, then fail. @todo
+		if (FALSE) {
+			failTemp();
+		}
+	} // poll until done (@todo waste of time)
 	WriteI2C(0x90 | address  << 1);
 	IdleI2C();
 	WriteI2C(0x00); // Ta Register
 	IdleI2C();
-	StartI2C();
-	while(SSPCON2bits.SEN) {
+	RestartI2C();
+	while(SSPCON2bits.RSEN) {
 		// wait for a time, then fail. @todo
 		if (FALSE) {
-			ERROR_REGH |= TEMP_FAIL;
-			STATUS_REG |= 0x03;
+			failTemp();
 		}
 	}
 	WriteI2C(0x91 | address << 1); // READ
 	IdleI2C();
 	getsI2C(*data, 2); // grab length bytes from bus
 	NotAckI2C(); // send EOD bus condition
-	while (SSPCON2bits.ACKEN);
+	while (SSPCON2bits.ACKEN) {
+		// wait, then fail @todo
+		if (FALSE) {
+			failTemp();
+		}
+	}
 	StopI2C();
-	while (SSPCON2bits.PEN);
+	while (SSPCON2bits.PEN) {
+		// wtf @todo
+		if (FALSE) {
+			failTemp();
+		}
+	}
+}
+
+void failTemp(void) {
+	tempFailCount++;
+	if (tempFailCount > MAX_TEMP_FAILS) {
+		ERROR_REGH |= TEMP_FAIL;
+		STATUS_REG |= FAIL | SHDN;
+		openRelay();
+	}
 }
 
 void writeByteI2C(unsigned char controlByte, unsigned char address, unsigned char data) {
 	IdleI2C(); // make sure bus is idle
 	StartI2C(); // initiate START bus condition
-	while ( SSPCON2bits.SEN ); // wait until start condition is over 
+	while ( SSPCON2bits.SEN ) {
+		// wtf @todo
+	} // wait until start condition is over 
 	WriteI2C( controlByte ); // write 1 byte - R/W bit should be 0
 	IdleI2C(); // ensure module is idle
 	WriteI2C(0%1001 << 3 | address); // write address byte to EEPROM
@@ -337,8 +366,12 @@ void writeByteI2C(unsigned char controlByte, unsigned char address, unsigned cha
 	WriteI2C ( data );// Write data byte to EEPROM
 	IdleI2C();                          // ensure module is idle
 	StopI2C();                          // send STOP condition
-	while ( SSPCON2bits.PEN );          // wait until stop condition is over 
-	while (EEAckPolling(controlByte));  //Wait for write cycle to complete
+	while ( SSPCON2bits.PEN ){
+		// wtf @todo
+	}          // wait until stop condition is over 
+	while (EEAckPolling(controlByte)) {
+		// wtf @todo
+	}  //Wait for write cycle to complete
 }
 
 float intToFloat(int x, unsigned int shift) {
@@ -506,5 +539,6 @@ void reset(void) {
 	STATUS_REG = 0x00;
 	ERROR_REGL = 0x00;
 	ERROR_REGH = 0x00;
+	tempFailCount = 0;
 	closeRelay();
 }
