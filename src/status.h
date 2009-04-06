@@ -15,9 +15,9 @@
 //    13 - RESERVED
 //    14 - RESERVED
 //    15 - RESERVED
-#define SHDN		0x01;
-#define FAIL		0x02;
-#define SOFT_FAIL	0x08;
+#define SHDN		0x01
+#define FAIL		0x02
+#define SOFT_FAIL	0x08
 
 
 // ERROR_REGL
@@ -30,14 +30,14 @@
 //     6 - Unbalanced (@todo unimplemented)
 //     7 - Remote shutdown (@todo unimplemented)
 
-#define UNDERVOLT		0x01;
-#define OVERVOLT		0x02;
-#define OVERCURRENTIN	0x04;
-#define OVERCURRENTOUT	0x08;
-#define OVERTEMP		0x10;
-#define	BROWNOUT		0x20;
-#define UNBALANCED		0x40;
-#define REMOTE_SHDN		0x80;
+#define UNDERVOLT		0x01
+#define OVERVOLT		0x02
+#define OVERCURRENTIN	0x04
+#define OVERCURRENTOUT	0x08
+#define OVERTEMP		0x10
+#define	BROWNOUT		0x20
+#define UNBALANCED		0x40
+#define REMOTE_SHDN		0x80
 
 // ERROR_REGH
 //     1 - Oscillator Failure
@@ -48,7 +48,7 @@
 //     6 - RESERVED
 //     7 - RESERVED
 
-#define OSC_FAIL		0x01;
-#define READ_FAIL		0x02;
-#define REF_FAIL		0x04;
-#define TEMP_FAIL		0x08;
+#define OSC_FAIL		0x01
+#define READ_FAIL		0x02
+#define REF_FAIL		0x04
+#define TEMP_FAIL		0x08
