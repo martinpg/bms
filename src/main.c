@@ -27,7 +27,6 @@
 #include <math.h>
 #include <i2c.h>
 #include <stdlib.h>
-#include "UARTIntC.h"
 #include "status.h"
 
 #define TRUE	1
@@ -51,6 +50,7 @@ void increaseCount(void);
 void openRelay(void);
 void closeRelay(void);
 void checkVoltage(unsigned int x);
+void checkTemp(signed int x);
 void interruptHandlerHigh (void);
 void writeWord(unsigned char address, unsigned int x);
 unsigned int readWord(unsigned char address);
@@ -59,6 +59,7 @@ unsigned char eepromRead(unsigned char address);
 void initEEPROM(void);
 void readTemp(unsigned char address, int *data);
 void initTemps(void);
+void reset(void);
 
 unsigned int VRef;
 unsigned char EEPROM_OFFSET;
@@ -100,9 +101,10 @@ void init(void) {
 
 	// Initialize global variables
 	CURRENT_CELL = 0;
-	STATUS_REG = 0x01; // Operating (>1ma)
+	STATUS_REG = 0x00;
+	ERROR_REGL = 0x00;
+	ERROR_REGH = 0x00;
 	current = 0;
-	VRef = VDD; // Vdd
 
 	// Set up digital I/O ports
 
@@ -138,7 +140,6 @@ void init(void) {
 	PIE2 = 0x8C;
 	PIE3 = 0xA0;
 	//INTCONbits.GIEH = 1; // enable interrupts
-	INTCONbits.GIE = 1;
 	// @todo clear all interrupts?
 
 	// Set up I2C bus
@@ -151,6 +152,8 @@ void init(void) {
 	for (i = 0; i < MAX_CELLS; i++) {
 		gv[i] = 1; // gain V/V
 		bv[i] = 0; // bias (mV)
+		voltage[i] = VNOMINAL;
+		temp[i] = 25;
 	}
 }
 
@@ -207,6 +210,7 @@ void main(void) {
 	init();
 	setRedLED();
 	initEEPROM();
+
 	// Open ADC port looking at VRef+ pin
 	OpenADC(ADC_FOSC_8 & 
 			ADC_RIGHT_JUST &
@@ -247,13 +251,13 @@ void main(void) {
 		clearRedLED(); // debug
 	}
 	setGreenLED();
-	UARTIntInit(); // debug
 	while (TRUE) {
 		// @todo schedule ADC to do current more often than voltage (interrupts?)
 		readTemp(CURRENT_CELL, &temp[CURRENT_CELL]); // I2C still broken!
 		temp[CURRENT_CELL] >>= 4;
-		
-		//checkTemp(temp[CURRENT_CELL]);
+		checkTemp(temp[CURRENT_CELL]);
+	
+		// @todo current
 		if (BusyADC() == FALSE) {
 				clearRedLED();
 				voltage[CURRENT_CELL] = ReadADC();
@@ -263,7 +267,6 @@ void main(void) {
 				ConvertADC();
 				setRedLED();
 		}
-		UARTIntPutChar('X');
 	}
 		//_asm CLEARWDT _endasm
 	// @todo watchdog and clear it and stuff
@@ -307,10 +310,16 @@ void readTemp(unsigned char address, int *data) {
 	WriteI2C(0x00); // Ta Register
 	IdleI2C();
 	StartI2C();
-	while(SSPCON2bits.SEN);
+	while(SSPCON2bits.SEN) {
+		// wait for a time, then fail. @todo
+		if (FALSE) {
+			ERROR_REGH |= TEMP_FAIL;
+			STATUS_REG |= 0x03;
+		}
+	}
 	WriteI2C(0x91 | address << 1); // READ
 	IdleI2C();
-	getsI2C(data, 2); // grab length bytes from bus
+	getsI2C(*data, 2); // grab length bytes from bus
 	NotAckI2C(); // send EOD bus condition
 	while (SSPCON2bits.ACKEN);
 	StopI2C();
@@ -363,6 +372,7 @@ void checkVoltage(unsigned int x) {
 void checkCurrent(signed int x) {
 	if (x < CHARGE_RATE_LIMIT) {
 		STATUS_REG |= FAIL;
+		
 		openRelay();
 	} else if (x > DISCHG_RATE_LIMIT) {
 		STATUS_REG |= FAIL;
@@ -371,11 +381,13 @@ void checkCurrent(signed int x) {
 }
 
 void checkTemp(signed int x) {
-	if (x > TEMP_CHARGE_LIMIT) {
+	if (x > TEMP_DISCHG_LIMIT) {
 		STATUS_REG |= FAIL;
+		ERROR_REGL |= OVERTEMP;
 		openRelay();
-	} else if (x < TEMP_DISCHG_LIMIT) {
+	} else if (x > TEMP_CHARGE_LIMIT && STATUS_REG & CHARGING) {
 		STATUS_REG |= FAIL;
+		ERROR_REGL |= OVERTEMP;
 		openRelay();
 	}
 }
@@ -403,6 +415,7 @@ void increaseCount(void) {
 	if (CURRENT_CELL < MAX_CELLS) {
 		CURRENT_CELL++;
 	} else {
+		// wrap
 		CURRENT_CELL = 0;
 	}
 }
@@ -489,40 +502,9 @@ void eepromWrite(unsigned char address, unsigned char x) {
 	INTCONbits.GIE = 0x01 & oldGIE;
 }
 
-void low_isr(void);
-
-// serial interrupt taken as low priority interrupt
-#pragma code uart_int_service = 0x08
-void uart_int_service(void)
-{
-	_asm	goto low_isr	_endasm
-	
-}
-#pragma code
-
-#pragma	interruptlow low_isr save=section(".tmpdata")
-void low_isr(void)
-{	
-	// call of library module function, MUST
-	UARTIntISR();
-}
-
-void interruptHandlerHigh(void) {
-	if (PIR2bits.OSCFIF) {
-		STATUS_REG |= SOFT_FAIL;
-		ERROR_REGH |= OSC_FAIL;
-		PIR2bits.OSCFIF = 0;
-		// clear?
-	} else if (PIR1bits.ADIF) {
-		// ADC interrupt (not needed?
-		PIR1bits.ADIF = 0;
-	} else if (PIR2bits.BCLIF) {
-		// Bus collision
-		PIR2bits.BCLIF = 0;
-		// @todo busErrors++;
-	} else if (PIR3bits.ERRIF) {
-		// error in CAN module
-		PIR3bits.ERRIF = 0;
-		// @todo if CAN is actually being used, shutdown
-	}
+void reset(void) {
+	STATUS_REG = 0x00;
+	ERROR_REGL = 0x00;
+	ERROR_REGH = 0x00;
+	closeRelay();
 }
