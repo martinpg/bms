@@ -14,6 +14,10 @@
 #include <stdlib.h>
 #include <UARTIntC.h>
 
+#define ADC_RESOLUTION		1024; // 10 bits
+#define	VDD					5000; // mV
+#define VREF_DEFAULT		3300; // mV
+
 void init(void);
 void main(void);
 void setAddress(unsigned char address);
@@ -36,11 +40,6 @@ void initEEPROM(void);
 void readTemp(unsigned char address, int *data);
 void initTemps(void);
 
-#define TEMP_CONTROL_REG	0x00;
-#define ADC_RESOLUTION		1024;
-#define	VDD					5000; // mV
-#define VREF_DEFAULT		3300; // mV
-
 unsigned int MAX_CELLS = 8;
 unsigned int VRef;
 unsigned char EEPROM_OFFSET;
@@ -48,28 +47,27 @@ unsigned char CURRENT_CELL;
 unsigned int voltage[8];
 unsigned int temp[8];
 signed int current;
-
-// Default set points (saved to EEPROM if erased)
-unsigned int OVERVOLT_LIMIT = (int)4200; // Overvoltage setpoint (mV)
-unsigned int UNDERVOLT_LIMIT = (int)3000; // Undervoltage setpoint (mV)
-unsigned int DISCHG_RATE_LIMIT = (int)6000; // Overcurrent (discharge) setpoint (mA)
-unsigned int CHARGE_RATE_LIMIT = (int)3000; // Overcurrent (charge) setpoint (mA)
-unsigned int TEMP_DISCHG_LIMIT = (int)358; // Max discharge temperature (Kelvin)
-unsigned int TEMP_CHARGE_LIMIT = (int)333; // Max charge temperature (Kelvin)
-unsigned int CURRENT_THRES	= (int)10; // mA, Threshold of charge / discharge
-unsigned int REF_LOW_LIMIT = (int)2400; // mV, Reference too low
-unsigned int REF_HI_LIMIT = (int)2600; // mV, Reference too high
-
-// Voltage input stage calibration factors
-int gv[8] = {1, 1, 1, 1, 1, 1, 1, 1}; // gain
-int bv[8] = {0, 0, 0, 0, 0, 0, 0, 0}; // bias
-// Current input calibration factors
-unsigned int gi = 200; // mA/V
-unsigned int bi = 2500; // mV Q-point
-
 unsigned char STATUS_REG;
 unsigned char ERROR_REGL;
 unsigned char ERROR_REGH;
+
+// Default set points (saved to EEPROM if erased)
+unsigned int OVERVOLT_LIMIT = 4200; // Overvoltage setpoint (mV)
+unsigned int UNDERVOLT_LIMIT = 3000; // Undervoltage setpoint (mV)
+unsigned int DISCHG_RATE_LIMIT = 6000; // Overcurrent (discharge) setpoint (mA)
+unsigned int CHARGE_RATE_LIMIT = 3000; // Overcurrent (charge) setpoint (mA)
+unsigned int TEMP_DISCHG_LIMIT = 358; // Max discharge temperature (Kelvin)
+unsigned int TEMP_CHARGE_LIMIT = 333; // Max charge temperature (Kelvin)
+unsigned int CURRENT_THRES	= 10; // Threshold of charge / discharge (mA)
+unsigned int REF_LOW_LIMIT = 2400; // Reference too low (mV)
+unsigned int REF_HI_LIMIT = 2600; // Reference too high (mV)
+
+// Voltage input stage calibration factors
+int gv[8] = {1, 1, 1, 1, 1, 1, 1, 1}; // gain (V/V)
+int bv[8] = {0, 0, 0, 0, 0, 0, 0, 0}; // bias (mV)
+// Current input calibration factors
+unsigned int gi = 200; // Sensitivity (mA/V)
+unsigned int bi = 2500; // Q-point (mV)
 
 void init(void) {
 	// Initialize clock
@@ -234,7 +232,7 @@ void main(void) {
 				voltage[CURRENT_CELL] = ReadADC();
 				increaseCount();
 				setAddress(CURRENT_CELL);
-				Delay10TCYx(5); // delay after switching
+				Delay10TCYx(1); // delay after switching
 				ConvertADC();
 				setRedLED();
 		}
