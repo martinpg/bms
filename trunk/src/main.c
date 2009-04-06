@@ -62,7 +62,7 @@ unsigned int VRef;
 unsigned char EEPROM_OFFSET;
 unsigned char CURRENT_CELL;
 unsigned int voltage[MAX_CELLS];
-unsigned int temp[MAX_CELLS];
+signed int temp[MAX_CELLS];
 signed int current;
 unsigned char STATUS_REG;
 unsigned char ERROR_REGL;
@@ -93,7 +93,6 @@ void init(void) {
 	// 0b111100?0
 	OSCCON = 0xF2;
 	//SSPADD = 0x13;
-	//OSCTUNE = 0x00; // set to 31 kHz
 
 	// Initialize global variables
 	CURRENT_CELL = 0;
@@ -115,7 +114,7 @@ void init(void) {
 	//				2 - CANTX
 	//				3 - CANRX
 	//				4-7 - N.C.
-	TRISB &= 0x08;
+	TRISB = 0x08;
 
 	//		PORTC:	0 - Address bit 0
 	//				1 - Address bit 1
@@ -125,7 +124,7 @@ void init(void) {
 	//				5 - Relay Enable (active high)
 	//				6 - Serial TX
 	//				7 - Serial RX
-	TRISC &= 0x98;
+	TRISC = 0x98;
 
 	// Set up interrupts
 	INTCON = 0x4; // Disable global interrupt, enables peripheral interrupt
@@ -324,50 +323,20 @@ void writeByteI2C(unsigned char controlByte, unsigned char address, unsigned cha
 
 float intToFloat(int x, unsigned int shift) {
 	// shift is where the decimal occurs (ie 1 represents to the left of the ones place)
-	float result = 0;
+	/*float result = 0;
 	char i;
 	for (i = 0; i < 16; i++) {
 		result += pow(2, i - shift) * (x & (0x01 << i)); // debug
 	}
+	return result;*/
+	float result = (float)(x >> shift);
+	result += ((float)(x & ((shift << 1) - 1))) / pow(2, shift);
 	return result;
 }
 
 int floatToInt(auto float x) {
 	//return x * ADC_RESOLUTION / intToFloat(Vref);
 	return (int) x;
-}
-
-char setOV(float x) {
-	if (x < 5 && x > 0) {
-		OVERVOLT_LIMIT = x;
-		return 0;
-	}
-	return 1;
-}
-
-char setUV(float x) {
-	if (x < 5 && x > 0) {
-		UNDERVOLT_LIMIT = x;
-		return 0;
-	}
-	return 1;
-}
-
-char setOC(float x) {
-	// 10 Amp limit on relay (hardware limitation)
-	if (fabs(x) < 10) {
-		DISCHG_RATE_LIMIT = fabs(x);
-		return 0;
-	}
-	return 1;
-}
-
-char setOD(float x) {
-	if (fabs(x) < 10) {
-		CHARGE_RATE_LIMIT = fabs(x);
-		return 0;
-	}
-	return 1;
 }
 
 void checkVoltage(int x) {
