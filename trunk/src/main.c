@@ -36,6 +36,7 @@
 #define VREF_DEFAULT		3300 // mV
 #define VNOMINAL			3700 // mV
 #define MAX_CELLS 			8
+#define MAX_TEMP_FAILS		2
 
 void init(void);
 void main(void);
@@ -258,7 +259,7 @@ void main(void) {
 	while (TRUE) {
 		// @todo schedule ADC to do current more often than voltage (interrupts?)
 		readTemp(CURRENT_CELL, &temp[CURRENT_CELL]); // I2C still broken!
-		temp[CURRENT_CELL] >>= 4;
+		//temp[CURRENT_CELL] >>= 4;
 		checkTemp(temp[CURRENT_CELL]);
 	
 		// @todo current
