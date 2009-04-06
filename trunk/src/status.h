@@ -1,7 +1,7 @@
 // Status "register"
 // LSB 0 - Active (@todo high speed mode) ( >1 mA)
 //     1 - Shutdown (active low @todo)
-//     2 - Charge (1), Discharge (0)
+//     2 - Charge (1), Discharge (0) @todo
 //	   3 - Soft fail (still running)
 //     4 - RESERVED
 //     5 - RESERVED
@@ -16,6 +16,7 @@
 //    14 - RESERVED
 //    15 - RESERVED
 #define SHDN		0x01
+#define CHARGING	0x04
 #define FAIL		0x02
 #define SOFT_FAIL	0x08
 
@@ -40,10 +41,11 @@
 #define REMOTE_SHDN		0x80
 
 // ERROR_REGH
-//     1 - Oscillator Failure
-//     2 - EEPROM Read Failure
-//     3 - Voltage Reference Failure
-//     4 - Temperature Sensor Failure
+//     0 - Oscillator Failure
+//     1 - EEPROM Read Failure
+//     2 - Voltage Reference Failure
+//     3 - Temperature Sensor Failure
+//     4 - RESERVED
 //     5 - RESERVED
 //     6 - RESERVED
 //     7 - RESERVED
