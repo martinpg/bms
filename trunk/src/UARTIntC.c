@@ -50,7 +50,7 @@
 #include "UARTIntC.h"
 
 // target specific file will go here
-#include <p18f452.h>
+#include <p18f2680.h>
 
 // status flags of receive and transmit buffers
 struct status vUARTIntStatus;
