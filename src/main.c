@@ -25,10 +25,10 @@
 #include <adc.h>
 #include <delays.h>
 #include <math.h>
-#include <status.h>
 #include <i2c.h>
 #include <stdlib.h>
-#include <UARTIntC.h>
+#include "UARTIntC.h"
+#include "status.h"
 
 #define ADC_RESOLUTION		1024; // 10 bits
 #define	VDD					5000; // mV
@@ -80,7 +80,7 @@ unsigned int REF_LOW_LIMIT = 2400; // Reference too low (mV)
 unsigned int REF_HI_LIMIT = 2600; // Reference too high (mV)
 
 // Voltage input stage calibration factors
-int gv[8] = {1, 1, 1, 1, 1, 1, 1, 1}; // gain (V/V)
+float gv[8] = {1, 1, 1, 1, 1, 1, 1, 1}; // gain (V/V)
 int bv[8] = {0, 0, 0, 0, 0, 0, 0, 0}; // bias (mV)
 // Current input calibration factors
 unsigned int gi = 200; // Sensitivity (mA/V)
@@ -301,6 +301,7 @@ void readTemp(unsigned char address, int *data) {
 	IdleI2C();
 	getsI2C(data, 2); // grab length bytes from bus
 	NotAckI2C(); // send EOD bus condition
+	data >>= 4;
 	while (SSPCON2bits.ACKEN);
 	StopI2C();
 	while (SSPCON2bits.PEN);
@@ -339,7 +340,7 @@ int floatToInt(auto float x) {
 	return (int) x;
 }
 
-void checkVoltage(int x) {
+void checkVoltage(unsigned int x) {
 	if (x > OVERVOLT_LIMIT) {
 		STATUS_REG |= FAIL;
 		openRelay();
@@ -349,7 +350,7 @@ void checkVoltage(int x) {
 	}
 }
 
-void checkCurrent(int x) {
+void checkCurrent(signed int x) {
 	if (x < CHARGE_RATE_LIMIT) {
 		STATUS_REG |= FAIL;
 		openRelay();
@@ -359,7 +360,7 @@ void checkCurrent(int x) {
 	}
 }
 
-void checkTemp(int x) {
+void checkTemp(signed int x) {
 	if (x > TEMP_CHARGE_LIMIT) {
 		STATUS_REG |= FAIL;
 		openRelay();
