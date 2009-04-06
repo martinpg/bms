@@ -1,9 +1,25 @@
- //
-//
-// Main Routine (main loop)
-//
+/*
+ *
+ * Battery Management System
+ * 
+ * Version 0.1
+ *
+ * Queen's University
+ * Electrical and Computing Engineering
+ * http://www.ece.queensu.ca/
+ *
+ * Authors:
+ * Kevin McHale (k.mchale@me.com)
+ *
+ * Changelog:
+ * ...is taken care of by SVN.
+ *
+ */
+
+// To-dos
 //
 // @todo implement EEPROM flushing
+// @todo refactor code to be more than 1 file (main.c)
 
 #include <p18f2680.h>
 #include <adc.h>
@@ -17,6 +33,7 @@
 #define ADC_RESOLUTION		1024; // 10 bits
 #define	VDD					5000; // mV
 #define VREF_DEFAULT		3300; // mV
+#define MAX_CELLS			8	;
 
 void init(void);
 void main(void);
@@ -40,12 +57,12 @@ void initEEPROM(void);
 void readTemp(unsigned char address, int *data);
 void initTemps(void);
 
-unsigned int MAX_CELLS = 8;
+//unsigned int MAX_CELLS = 8;
 unsigned int VRef;
 unsigned char EEPROM_OFFSET;
 unsigned char CURRENT_CELL;
-unsigned int voltage[8];
-unsigned int temp[8];
+unsigned int voltage[MAX_CELLS];
+unsigned int temp[MAX_CELLS];
 signed int current;
 unsigned char STATUS_REG;
 unsigned char ERROR_REGL;
@@ -118,7 +135,7 @@ void init(void) {
 	PIE2 = 0x8C;
 	PIE3 = 0xA0;
 	//INTCONbits.GIEH = 1; // enable interrupts
-	INTCONbits.GIE = 0;
+	INTCONbits.GIE = 1;
 	// @todo clear all interrupts?
 
 	// Set up I2C bus
@@ -310,7 +327,7 @@ float intToFloat(int x, unsigned int shift) {
 	float result = 0;
 	char i;
 	for (i = 0; i < 16; i++) {
-		result += pow(2, i - shift) * (x & (0x01 << i));
+		result += pow(2, i - shift) * (x & (0x01 << i)); // debug
 	}
 	return result;
 }
