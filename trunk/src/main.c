@@ -92,6 +92,7 @@ void init(void) {
 	// FOSC3:FOSC0=1001 or 1000
 	// 0b111100?0
 	OSCCON = 0xF2;
+	OSCTUNE |= 0xC0;
 	//SSPADD = 0x13;
 
 	// Initialize global variables
