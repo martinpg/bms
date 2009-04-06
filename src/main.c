@@ -20,6 +20,7 @@
 //
 // @todo implement EEPROM flushing
 // @todo refactor code to be more than 1 file (main.c)
+// @todo fix EEPROM implementation
 
 #include <p18f2680.h>
 #include <adc.h>
@@ -37,6 +38,7 @@
 #define VNOMINAL			3700 // mV
 #define MAX_CELLS 			8
 #define MAX_TEMP_FAILS		2
+#define TEMP_CONFIG_REG		0x00
 
 void init(void);
 void main(void);
@@ -299,7 +301,22 @@ void initTemps(void) {
 		IdleI2C();
 		WriteI2C(0x01); // select CONFIG register
 		IdleI2C();
-		WriteI2C(0x60); // set resolution to maximum
+		WriteI2C(TEMP_CONFIG_REG);
+		IdleI2C();
+		StopI2C();
+		while (SSPCON2bits.PEN);
+		
+		// Select Ta register for future reads
+		StartI2C();	// initiate START bus condition
+		while (SSPCON2bits.SEN) {
+			// wait for a time, then fail. @todo
+			if (FALSE) {
+				failTemp();
+			}
+		} // poll until done (@todo waste of time)
+		WriteI2C(0x90 | address  << 1);
+		IdleI2C();
+		WriteI2C(0x00); // Ta Register
 		IdleI2C();
 		StopI2C();
 		while (SSPCON2bits.PEN);
@@ -309,18 +326,7 @@ void initTemps(void) {
 void readTemp(unsigned char address, int *data) {
 	IdleI2C();	// make sure bus is idle
 	StartI2C();	// initiate START bus condition
-	while (SSPCON2bits.SEN) {
-		// wait for a time, then fail. @todo
-		if (FALSE) {
-			failTemp();
-		}
-	} // poll until done (@todo waste of time)
-	WriteI2C(0x90 | address  << 1);
-	IdleI2C();
-	WriteI2C(0x00); // Ta Register
-	IdleI2C();
-	RestartI2C();
-	while(SSPCON2bits.RSEN) {
+	while(SSPCON2bits.SEN) {
 		// wait for a time, then fail. @todo
 		if (FALSE) {
 			failTemp();
@@ -328,7 +334,7 @@ void readTemp(unsigned char address, int *data) {
 	}
 	WriteI2C(0x91 | address << 1); // READ
 	IdleI2C();
-	getsI2C(*data, 2); // grab length bytes from bus
+	getsI2C(data, 2); // grab length bytes from bus
 	NotAckI2C(); // send EOD bus condition
 	while (SSPCON2bits.ACKEN) {
 		// wait, then fail @todo
