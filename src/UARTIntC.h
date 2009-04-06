@@ -62,11 +62,12 @@
   #define TXON 0
 #endif
 
-#ifdef UARTINTC_RXON
+/*#ifdef UARTINTC_RXON
   #define RXON 1
 #elif UARTINTC_RXOFF
   #define RXON 0
-#endif
+#endif*/
+#define RXON 0
 
 #define TXON_AND_RXON ((TXON) & (RXON))
 #define	TXOFF_AND_RXON ((!(TXON)) & (RXON))

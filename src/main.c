@@ -30,10 +30,13 @@
 #include "UARTIntC.h"
 #include "status.h"
 
-#define ADC_RESOLUTION		1024; // 10 bits
-#define	VDD					5000; // mV
-#define VREF_DEFAULT		3300; // mV
-#define MAX_CELLS			8	;
+#define TRUE	1
+#define FALSE	0
+#define ADC_RESOLUTION		1024 // 10 bits
+#define	VDD					5000 // mV
+#define VREF_DEFAULT		3300 // mV
+#define VNOMINAL			3700 // mV
+#define MAX_CELLS 			8
 
 void init(void);
 void main(void);
@@ -47,7 +50,7 @@ void clearGreenLED(void);
 void increaseCount(void);
 void openRelay(void);
 void closeRelay(void);
-void checkVoltage(int x);
+void checkVoltage(unsigned int x);
 void interruptHandlerHigh (void);
 void writeWord(unsigned char address, unsigned int x);
 unsigned int readWord(unsigned char address);
@@ -57,7 +60,6 @@ void initEEPROM(void);
 void readTemp(unsigned char address, int *data);
 void initTemps(void);
 
-//unsigned int MAX_CELLS = 8;
 unsigned int VRef;
 unsigned char EEPROM_OFFSET;
 unsigned char CURRENT_CELL;
@@ -80,13 +82,14 @@ unsigned int REF_LOW_LIMIT = 2400; // Reference too low (mV)
 unsigned int REF_HI_LIMIT = 2600; // Reference too high (mV)
 
 // Voltage input stage calibration factors
-float gv[8] = {1, 1, 1, 1, 1, 1, 1, 1}; // gain (V/V)
-int bv[8] = {0, 0, 0, 0, 0, 0, 0, 0}; // bias (mV)
+float gv[MAX_CELLS]; // gain (V/V)
+int bv[MAX_CELLS]; // bias (mV)
 // Current input calibration factors
 unsigned int gi = 200; // Sensitivity (mA/V)
 unsigned int bi = 2500; // Q-point (mV)
 
 void init(void) {
+	unsigned char i;
 	// Initialize clock
 	// OSCCON<6:4>=111 or 110
 	// FOSC3:FOSC0=1001 or 1000
@@ -143,6 +146,12 @@ void init(void) {
 	SSPCON1 = 0x28; // Enable MSSP Master
 	SSPADD = 0x18; // 100kHz
 	SSPCON2 = 0x00; // Clear MSSP Control Bits
+
+	// Initialize default cal factor arrays
+	for (i = 0; i < MAX_CELLS; i++) {
+		gv[i] = 1; // gain V/V
+		bv[i] = 0; // bias (mV)
+	}
 }
 
 void initEEPROM(void) {
@@ -234,17 +243,18 @@ void main(void) {
 				ADC_15ANA);
 		STATUS |= SOFT_FAIL;
 		ERROR_REGH |= REF_FAIL;
-		VRef = floatToInt(5.0);
+		VRef = VDD;
 		clearRedLED(); // debug
 	}
 	setGreenLED();
 	UARTIntInit(); // debug
-	while (1) {
+	while (TRUE) {
 		// @todo schedule ADC to do current more often than voltage (interrupts?)
 		readTemp(CURRENT_CELL, &temp[CURRENT_CELL]); // I2C still broken!
+		temp[CURRENT_CELL] >>= 4;
 		
 		//checkTemp(temp[CURRENT_CELL]);
-		if (BusyADC() == 0) {
+		if (BusyADC() == FALSE) {
 				clearRedLED();
 				voltage[CURRENT_CELL] = ReadADC();
 				increaseCount();
@@ -302,7 +312,6 @@ void readTemp(unsigned char address, int *data) {
 	IdleI2C();
 	getsI2C(data, 2); // grab length bytes from bus
 	NotAckI2C(); // send EOD bus condition
-	data >>= 4;
 	while (SSPCON2bits.ACKEN);
 	StopI2C();
 	while (SSPCON2bits.PEN);
