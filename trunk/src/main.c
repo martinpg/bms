@@ -60,7 +60,7 @@ unsigned int readWord(unsigned char address);
 void eepromWrite(unsigned char address, unsigned char x);
 unsigned char eepromRead(unsigned char address);
 void initEEPROM(void);
-void readTemp(unsigned char address, int *data);
+signed int readTemp(unsigned char address);
 void initTemps(void);
 void reset(void);
 void failTemp(void);
@@ -75,6 +75,7 @@ unsigned char STATUS_REG;
 unsigned char ERROR_REGL;
 unsigned char ERROR_REGH;
 unsigned char tempFailCount;
+unsigned char tempEnable;
 
 // Default set points (saved to EEPROM if erased)
 unsigned int OVERVOLT_LIMIT = 4200; // Overvoltage setpoint (mV)
@@ -158,8 +159,6 @@ void init(void) {
 	for (i = 0; i < MAX_CELLS; i++) {
 		gv[i] = 1; // gain V/V
 		bv[i] = 0; // bias (mV)
-		voltage[i] = VNOMINAL;
-		temp[i] = 25;
 	}
 }
 
@@ -260,7 +259,8 @@ void main(void) {
 	setGreenLED();
 	while (TRUE) {
 		// @todo schedule ADC to do current more often than voltage (interrupts?)
-		readTemp(CURRENT_CELL, &temp[CURRENT_CELL]); // I2C still broken!
+		//readTemp(CURRENT_CELL, &temp[CURRENT_CELL]); // I2C still broken!
+		temp[CURRENT_CELL] = readTemp(CURRENT_CELL);
 		//temp[CURRENT_CELL] >>= 4;
 		checkTemp(temp[CURRENT_CELL]);
 	
@@ -301,32 +301,32 @@ void initTemps(void) {
 		IdleI2C();
 		WriteI2C(0x01); // select CONFIG register
 		IdleI2C();
+		//WriteI2C(0x60); // set resolution to maximum
 		WriteI2C(TEMP_CONFIG_REG);
 		IdleI2C();
 		StopI2C();
 		while (SSPCON2bits.PEN);
-		
-		// Select Ta register for future reads
-		StartI2C();	// initiate START bus condition
-		while (SSPCON2bits.SEN) {
-			// wait for a time, then fail. @todo
-			if (FALSE) {
-				failTemp();
-			}
-		} // poll until done (@todo waste of time)
-		WriteI2C(0x90 | address  << 1);
-		IdleI2C();
-		WriteI2C(0x00); // Ta Register
-		IdleI2C();
-		StopI2C();
-		while (SSPCON2bits.PEN);
-	}
+		/*		// Select Ta register for future reads		StartI2C();	// initiate START bus condition		while (SSPCON2bits.SEN) {			// wait for a time, then fail. @todo			if (FALSE) {				failTemp();			}		} // poll until done (@todo waste of time)		WriteI2C(0x90 | address  << 1);		IdleI2C();		WriteI2C(0x00); // Ta Register		IdleI2C();		StopI2C();		while (SSPCON2bits.PEN);*/	}
 }
 
-void readTemp(unsigned char address, int *data) {
+signed int readTemp(unsigned char address) {
+	signed int result;
+	//if ((1 << address) & tempEnable) // check if enabled, if it is, don't select Ta reg again
 	IdleI2C();	// make sure bus is idle
 	StartI2C();	// initiate START bus condition
-	while(SSPCON2bits.SEN) {
+	while (SSPCON2bits.SEN) {
+
+		// wait for a time, then fail. @todo
+		if (FALSE) {
+			failTemp();
+		}
+	} // poll until done (@todo waste of time)
+	WriteI2C(0x90 | address  << 1);
+	IdleI2C();
+	WriteI2C(0x00); // Ta Register
+	IdleI2C();
+	RestartI2C();
+	while(SSPCON2bits.RSEN) {
 		// wait for a time, then fail. @todo
 		if (FALSE) {
 			failTemp();
@@ -334,8 +334,7 @@ void readTemp(unsigned char address, int *data) {
 	}
 	WriteI2C(0x91 | address << 1); // READ
 	IdleI2C();
-	getsI2C(data, 2); // grab length bytes from bus
-	NotAckI2C(); // send EOD bus condition
+	//getsI2C(*data, 2); // grab length bytes from bus	result = ReadI2C() << 8;	AckI2C();	IdleI2C();	result |= ReadI2C();	NotAckI2C(); // send EOD bus condition
 	while (SSPCON2bits.ACKEN) {
 		// wait, then fail @todo
 		if (FALSE) {
@@ -349,6 +348,7 @@ void readTemp(unsigned char address, int *data) {
 			failTemp();
 		}
 	}
+	return result;
 }
 
 void failTemp(void) {
