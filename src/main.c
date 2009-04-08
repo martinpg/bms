@@ -35,8 +35,7 @@
 #define ADC_RESOLUTION		1024 // 10 bits
 #define	VDD					5000 // mV
 #define VREF_DEFAULT		3300 // mV
-#define VNOMINAL			3700 // mV
-#define MAX_CELLS 			8
+#define MAX_CELLS 			4
 #define MAX_TEMP_FAILS		2
 #define TEMP_CONFIG_REG		0x00
 
@@ -61,9 +60,9 @@ void eepromWrite(unsigned char address, unsigned char x);
 unsigned char eepromRead(unsigned char address);
 void initEEPROM(void);
 signed int readTemp(unsigned char address);
-void initTemps(void);
+void initTemp(unsigned char address);
 void reset(void);
-void failTemp(void);
+void failTemp(unsigned char address);
 
 unsigned int VRef;
 unsigned char EEPROM_OFFSET;
@@ -78,15 +77,15 @@ unsigned char tempFailCount;
 unsigned char tempEnable;
 
 // Default set points (saved to EEPROM if erased)
-unsigned int OVERVOLT_LIMIT = 4200; // Overvoltage setpoint (mV)
-unsigned int UNDERVOLT_LIMIT = 3000; // Undervoltage setpoint (mV)
+unsigned int OVERVOLT_LIMIT = 0x035C; // Overvoltage setpoint
+unsigned int UNDERVOLT_LIMIT = 0x0266; // Undervoltage setpoint
 unsigned int DISCHG_RATE_LIMIT = 6000; // Overcurrent (discharge) setpoint (mA)
 unsigned int CHARGE_RATE_LIMIT = 3000; // Overcurrent (charge) setpoint (mA)
-unsigned int TEMP_DISCHG_LIMIT = 358; // Max discharge temperature (Kelvin)
-unsigned int TEMP_CHARGE_LIMIT = 333; // Max charge temperature (Kelvin)
 unsigned int CURRENT_THRES	= 10; // Threshold of charge / discharge (mA)
-unsigned int REF_LOW_LIMIT = 2400; // Reference too low (mV)
-unsigned int REF_HI_LIMIT = 2600; // Reference too high (mV)
+unsigned int TEMP_DISCHG_LIMIT = 0x2A00; // Max discharge temperature
+unsigned int TEMP_CHARGE_LIMIT = 0x1E00; // Max charge temperature
+unsigned int REF_LOW_LIMIT = 0x02AE; // Reference too low (mV): ~3247 mV
+unsigned int REF_HI_LIMIT = 0x0299; // Reference too high (mV): ~3349 mV
 unsigned int MAX_TEMP_FAIL = 2; // failures tolerated
 
 // Voltage input stage calibration factors
@@ -112,6 +111,7 @@ void init(void) {
 	ERROR_REGL = 0x00;
 	ERROR_REGH = 0x00;
 	current = 0;
+	VRef = VDD;
 
 	// Set up digital I/O ports
 
@@ -140,7 +140,7 @@ void init(void) {
 	TRISC = 0x98;
 
 	// Set up interrupts
-	INTCON = 0x04; // Disable global interrupt, enables peripheral interrupt
+	/*INTCON = 0x04; // Disable global interrupt, enables peripheral interrupt
 	INTCON2 = 0x00;
 	RCONbits.IPEN = 0; // disable priority interrupts
 	PIE1 = 0x00;
@@ -148,6 +148,7 @@ void init(void) {
 	PIE3 = 0xA0;
 	//INTCONbits.GIEH = 1; // enable interrupts
 	// @todo clear all interrupts?
+	*/
 
 	// Set up I2C bus
 	/*SSPSTAT = 0x80; // Disable SMBus & slew rate control
@@ -213,9 +214,9 @@ void initEEPROM(void) {
 }
 
 void main(void) {
+	unsigned char i ;
 	init();
 	setRedLED();
-	//initEEPROM();
 
 	// Open ADC port looking at VRef+ pin
 	OpenADC(ADC_FOSC_8 & 
@@ -226,8 +227,10 @@ void main(void) {
 			ADC_REF_VDD_VSS, 
 			ADC_15ANA);
 	OpenI2C(MASTER, SLEW_OFF);
-	initTemps();
 	ConvertADC();
+	for (i = 0; i < MAX_CELLS; i++) {
+		initTemp(i);
+	}
 	while (BusyADC()); // wait for ADC to complete
 	if (ReadADC() > REF_LOW_LIMIT && ReadADC() < REF_HI_LIMIT) {
 		// Reference is good to go; use it.
@@ -254,7 +257,6 @@ void main(void) {
 		STATUS |= SOFT_FAIL;
 		ERROR_REGH |= REF_FAIL;
 		VRef = VDD;
-		clearRedLED(); // debug
 	}
 	setGreenLED();
 	while (TRUE) {
@@ -274,6 +276,7 @@ void main(void) {
 				ConvertADC();
 				setRedLED();
 		}
+		ClearWdt();
 	}
 		//_asm CLEARWDT _endasm
 	// @todo watchdog and clear it and stuff
@@ -284,74 +287,71 @@ void main(void) {
 	//_asm nop _endasm
 	//_asm nop _endasm
 	//_asm nop _endasm
-	//closeRelay(); // should never get here
+	//openRelay(); // should never get here
+	Reset();
 }
 
 //void writeSCI(int x) {
 	//while(UARTIntPutChar(itoa(x)));
 //}
 
-void initTemps(void) {
-	unsigned char i;
-	for (i = 0; i < MAX_CELLS; i++) {
-		IdleI2C();
-		StartI2C();
-		while (SSPCON2bits.SEN);
-		WriteI2C(0x90 | i << 1);
-		IdleI2C();
-		WriteI2C(0x01); // select CONFIG register
-		IdleI2C();
-		//WriteI2C(0x60); // set resolution to maximum
-		WriteI2C(TEMP_CONFIG_REG);
-		IdleI2C();
-		StopI2C();
-		while (SSPCON2bits.PEN);
-		/*		// Select Ta register for future reads		StartI2C();	// initiate START bus condition		while (SSPCON2bits.SEN) {			// wait for a time, then fail. @todo			if (FALSE) {				failTemp();			}		} // poll until done (@todo waste of time)		WriteI2C(0x90 | address  << 1);		IdleI2C();		WriteI2C(0x00); // Ta Register		IdleI2C();		StopI2C();		while (SSPCON2bits.PEN);*/	}
+void initTemp(unsigned char address) {
+	char error = 0;
+	IdleI2C();
+	StartI2C();
+	while (SSPCON2bits.SEN);
+	IdleI2C();
+	error |= WriteI2C(0x90 | (address << 1));
+	IdleI2C();
+	error |= WriteI2C(0x01); // select CONFIG register
+	IdleI2C();
+	error |= WriteI2C(TEMP_CONFIG_REG);
+	if (error) {
+		failTemp(address);
+	} else {
+		tempEnable |= 1 << address;
+	}
+	IdleI2C();
+	StopI2C();
+	while (SSPCON2bits.PEN);
 }
 
 signed int readTemp(unsigned char address) {
-	signed int result;
-	//if ((1 << address) & tempEnable) // check if enabled, if it is, don't select Ta reg again
+	unsigned int result;
+	char error = 0;
+	if (!(tempEnable & (1 << address)) >> address) { // check if enabled, if it is, don't select Ta reg again
+		initTemp(address);
+	}
 	IdleI2C();	// make sure bus is idle
 	StartI2C();	// initiate START bus condition
-	while (SSPCON2bits.SEN) {
-
-		// wait for a time, then fail. @todo
-		if (FALSE) {
-			failTemp();
-		}
-	} // poll until done (@todo waste of time)
-	WriteI2C(0x90 | address  << 1);
+	while (SSPCON2bits.SEN);
 	IdleI2C();
-	WriteI2C(0x00); // Ta Register
+	error |= WriteI2C(0x90 | (address  << 1));
+	IdleI2C();
+	error |= WriteI2C(0x00); // Ta Register
 	IdleI2C();
 	RestartI2C();
-	while(SSPCON2bits.RSEN) {
-		// wait for a time, then fail. @todo
-		if (FALSE) {
-			failTemp();
-		}
-	}
-	WriteI2C(0x91 | address << 1); // READ
+	while(SSPCON2bits.RSEN);
 	IdleI2C();
+	error |= WriteI2C(0x91 | (address << 1)); // READ
+	if (error) {
+		failTemp(address);
+	}
+	IdleI2C();
+	result = ReadI2C() << 8;
+	AckI2C();
+	result += ReadI2C();
 	//getsI2C(*data, 2); // grab length bytes from bus	result = ReadI2C() << 8;	AckI2C();	IdleI2C();	result |= ReadI2C();	NotAckI2C(); // send EOD bus condition
-	while (SSPCON2bits.ACKEN) {
-		// wait, then fail @todo
-		if (FALSE) {
-			failTemp();
-		}
-	}
+	NotAckI2C();
+	while (SSPCON2bits.ACKEN);
 	StopI2C();
-	while (SSPCON2bits.PEN) {
-		// wtf @todo
-		if (FALSE) {
-			failTemp();
-		}
-	}
+	while (SSPCON2bits.PEN);
 	return result;
 }
 
-void failTemp(void) {
+void failTemp(unsigned char address) {
+	// @todo add *which* temp failed, change EN status
+	tempEnable &= ~(1 << address);
 	tempFailCount++;
 	if (tempFailCount > MAX_TEMP_FAILS) {
 		ERROR_REGH |= TEMP_FAIL;
@@ -547,5 +547,6 @@ void reset(void) {
 	ERROR_REGL = 0x00;
 	ERROR_REGH = 0x00;
 	tempFailCount = 0;
+	tempEnable = 0x00;
 	closeRelay();
 }
