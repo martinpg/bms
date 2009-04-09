@@ -38,6 +38,12 @@
 #define MAX_CELLS 			4
 #define MAX_TEMP_FAILS		2
 #define TEMP_CONFIG_REG		0x00
+#define ADC_CONFIG			ADC_FOSC_8 & ADC_RIGHT_JUST & ADC_16_TAD
+#define ADC_VREF			ADC_CH3 & ADC_INT_ON & ADC_REF_VDD_VSS
+/*#define ADC_CURRENT			ADC_CH1 & ADC_INT_ON & ADC_REF_VREFPLUS_VSS
+#define ADC_MUX				ADC_CH0 & ADC_INT_ON & ADC_REF_VREFPLUS_VSS
+#define ADC_CURRENT_NOREF	ADC_CH0 & ADC_INT_ON & ADC_REF_VDD_VSS
+#define ADC_MUX_NOREF		ADC_CH0 & ADC_INT_ON & ADC_REF_VDD_VSS*/
 
 void init(void);
 void main(void);
@@ -52,6 +58,7 @@ void increaseCount(void);
 void openRelay(void);
 void closeRelay(void);
 void checkVoltage(unsigned int x);
+void checkCurrent(unsigned int x);
 void checkTemp(signed int x);
 void interruptHandlerHigh (void);
 void writeWord(unsigned char address, unsigned int x);
@@ -67,9 +74,12 @@ void failTemp(unsigned char address);
 unsigned int VRef;
 unsigned char EEPROM_OFFSET;
 unsigned char CURRENT_CELL;
+unsigned char ADC_CURRENT = 0;
+unsigned char ADC_MUX = 0;
 unsigned int voltage[MAX_CELLS];
+unsigned int current;
+unsigned int MAX_TEMP_FAIL = 2; // failures tolerated
 signed int temp[MAX_CELLS];
-signed int current;
 unsigned char STATUS_REG;
 unsigned char ERROR_REGL;
 unsigned char ERROR_REGH;
@@ -77,8 +87,10 @@ unsigned char tempFailCount;
 unsigned char tempEnable;
 
 // Default set points (saved to EEPROM if erased)
-unsigned int OVERVOLT_LIMIT = 0x035C; // Overvoltage setpoint
-unsigned int UNDERVOLT_LIMIT = 0x0266; // Undervoltage setpoint
+//unsigned int OVERVOLT_LIMIT = 0x035C; // Overvoltage setpoint
+//unsigned int UNDERVOLT_LIMIT = 0x0266; // Undervoltage setpoint
+unsigned int OVERVOLT_LIMIT[MAX_CELLS] = {0x0215, 0x03FF, 0x03FF, 0x03FF, 0x03FF, 0x03FF, 0x03FF, 0x03FF}; //@todo only works for first amp
+unsigned int UNDERVOLT_LIMIT[MAX_CELLS] = {0x00C3, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000}; //@todo enter new values into spreadsheet; these are broken
 unsigned int DISCHG_RATE_LIMIT = 6000; // Overcurrent (discharge) setpoint (mA)
 unsigned int CHARGE_RATE_LIMIT = 3000; // Overcurrent (charge) setpoint (mA)
 unsigned int CURRENT_THRES	= 10; // Threshold of charge / discharge (mA)
@@ -86,14 +98,13 @@ unsigned int TEMP_DISCHG_LIMIT = 0x2A00; // Max discharge temperature
 unsigned int TEMP_CHARGE_LIMIT = 0x1E00; // Max charge temperature
 unsigned int REF_LOW_LIMIT = 0x02AE; // Reference too low (mV): ~3247 mV
 unsigned int REF_HI_LIMIT = 0x0299; // Reference too high (mV): ~3349 mV
-unsigned int MAX_TEMP_FAIL = 2; // failures tolerated
 
 // Voltage input stage calibration factors
-float gv[MAX_CELLS]; // gain (V/V)
-int bv[MAX_CELLS]; // bias (mV)
+//float gv[MAX_CELLS]; // gain (V/V)
+//int bv[MAX_CELLS]; // bias (mV)
 // Current input calibration factors
-unsigned int gi = 200; // Sensitivity (mA/V)
-unsigned int bi = 2500; // Q-point (mV)
+//unsigned int gi = 200; // Sensitivity (mA/V)
+//unsigned int bi = 2500; // Q-point (mV)
 
 void init(void) {
 	unsigned char i;
@@ -104,31 +115,32 @@ void init(void) {
 	OSCCON = 0xF2;
 	OSCTUNE |= 0xC0;
 	//SSPADD = 0x13;
-
+	
 	// Initialize global variables
 	CURRENT_CELL = 0;
+	EEPROM_OFFSET = 0x00;
 	STATUS_REG = 0x00;
 	ERROR_REGL = 0x00;
 	ERROR_REGH = 0x00;
 	current = 0;
 	VRef = VDD;
-
+	
 	// Set up digital I/O ports
-
+	
 	// 		PORTA:	0 - MUX Output
 	//				1 - Current Sensor Output
 	//				3 - Voltage Reference (+3.3V)
 	//				2,4,5 - N.C.
 	//				6,7 - Clock
 	TRISA = 0xCB;
-
+	
 	//		PORTB:	0 - LED0
 	//				1 - LED1
 	//				2 - CANTX
 	//				3 - CANRX
 	//				4-7 - N.C.
 	TRISB = 0x08;
-
+	
 	//		PORTC:	0 - Address bit 0
 	//				1 - Address bit 1
 	//				2 - Address bit 2
@@ -138,29 +150,29 @@ void init(void) {
 	//				6 - Serial TX
 	//				7 - Serial RX
 	TRISC = 0x98;
-
+	
 	// Set up interrupts
 	/*INTCON = 0x04; // Disable global interrupt, enables peripheral interrupt
-	INTCON2 = 0x00;
-	RCONbits.IPEN = 0; // disable priority interrupts
-	PIE1 = 0x00;
-	PIE2 = 0x8C;
-	PIE3 = 0xA0;
-	//INTCONbits.GIEH = 1; // enable interrupts
-	// @todo clear all interrupts?
-	*/
-
+	 INTCON2 = 0x00;
+	 RCONbits.IPEN = 0; // disable priority interrupts
+	 PIE1 = 0x00;
+	 PIE2 = 0x8C;
+	 PIE3 = 0xA0;
+	 //INTCONbits.GIEH = 1; // enable interrupts
+	 // @todo clear all interrupts?
+	 */
+	
 	// Set up I2C bus
 	/*SSPSTAT = 0x80; // Disable SMBus & slew rate control
-	SSPCON1 = 0x28; // Enable MSSP Master
-	SSPADD = 0x18; // 100kHz
-	SSPCON2 = 0x00; // Clear MSSP Control Bits
-	*/
+	 SSPCON1 = 0x28; // Enable MSSP Master
+	 SSPADD = 0x18; // 100kHz
+	 SSPCON2 = 0x00; // Clear MSSP Control Bits
+	 */
 	// Initialize default cal factor arrays
-	for (i = 0; i < MAX_CELLS; i++) {
-		gv[i] = 1; // gain V/V
-		bv[i] = 0; // bias (mV)
-	}
+	/*for (i = 0; i < MAX_CELLS; i++) {
+	 gv[i] = 1; // gain V/V
+	 bv[i] = 0; // bias (mV)
+	 }*/
 }
 
 void initEEPROM(void) {
@@ -169,116 +181,114 @@ void initEEPROM(void) {
 	EEPROM_OFFSET = eepromRead(0x00);
 	if (EEPROM_OFFSET == 0xFF || EEPROM_OFFSET == 0x00) {
 		// Setting up EEPROM for the first time
-		EEPROM_OFFSET = 0x01;
-		writeWord((EEPROM_OFFSET+=sizeof(UNDERVOLT_LIMIT)), UNDERVOLT_LIMIT);
-		writeWord((EEPROM_OFFSET+=sizeof(OVERVOLT_LIMIT)), OVERVOLT_LIMIT);
-		writeWord((EEPROM_OFFSET+=sizeof(CHARGE_RATE_LIMIT)), CHARGE_RATE_LIMIT);
-		writeWord((EEPROM_OFFSET+=sizeof(DISCHG_RATE_LIMIT)), DISCHG_RATE_LIMIT);
-		writeWord((EEPROM_OFFSET+=sizeof(TEMP_CHARGE_LIMIT)), TEMP_CHARGE_LIMIT);
-		writeWord((EEPROM_OFFSET+=sizeof(TEMP_DISCHG_LIMIT)), TEMP_DISCHG_LIMIT);
-		writeWord((EEPROM_OFFSET+=sizeof(CURRENT_THRES)), CURRENT_THRES);
-		writeWord((EEPROM_OFFSET+=sizeof(REF_LOW_LIMIT)), REF_LOW_LIMIT);
-		writeWord((EEPROM_OFFSET+=sizeof(REF_HI_LIMIT)), REF_HI_LIMIT);
+		EEPROM_OFFSET = 0x02;
 		for (i = 0; i < MAX_CELLS; i++) {
-			writeWord((EEPROM_OFFSET+=sizeof(gv[i])), gv[i]); // @todo cannot accept floats
-			writeWord((EEPROM_OFFSET+=sizeof(bv[i])), bv[i]);
+			writeWord(EEPROM_OFFSET, UNDERVOLT_LIMIT[i]);
+			EEPROM_OFFSET += 2;
+			writeWord(EEPROM_OFFSET + OVERVOLT_LIMIT[i]);
+			EEPROM_OFFSET += 2;
 		}
+		writeWord(EEPROM_OFFSET, CHARGE_RATE_LIMIT);
+		EEPROM_OFFSET += 2;
+		writeWord(EEPROM_OFFSET, DISCHG_RATE_LIMIT);
+		EEPROM_OFFSET += 2;
+		writeWord(EEPROM_OFFSET, CURRENT_THRES);
+		EEPROM_OFFSET += 2;
+		writeWord(EEPROM_OFFSET, TEMP_DISCHG_LIMIT);
+		EEPROM_OFFSET += 2;
+		writeWord(EEPROM_OFFSET, TEMP_CHARGE_LIMIT);
+		EEPROM_OFFSET += 2;
+		writeWord(EEPROM_OFFSET, REF_LOW_LIMIT);
+		EEPROM_OFFSET += 2;
+		writeWord(EEPROM_OFFSET, REF_HI_LIMIT);
+		EEPROM_OFFSET += 2;
 		eepromWrite(0x00, EEPROM_OFFSET);
 	} else {
-		//eepromWrite(0x00, EEPROM_OFFSET);
-		UNDERVOLT_LIMIT = readWord(EEPROM_OFFSET);
-		OVERVOLT_LIMIT = readWord(EEPROM_OFFSET+=sizeof(UNDERVOLT_LIMIT));
-		CHARGE_RATE_LIMIT = readWord(EEPROM_OFFSET+=sizeof(OVERVOLT_LIMIT));
-		DISCHG_RATE_LIMIT = readWord(EEPROM_OFFSET+=sizeof(CHARGE_RATE_LIMIT));
-		TEMP_CHARGE_LIMIT = readWord(EEPROM_OFFSET+=sizeof(DISCHG_RATE_LIMIT));
-		TEMP_DISCHG_LIMIT = readWord(EEPROM_OFFSET+=sizeof(TEMP_CHARGE_LIMIT));
-		CURRENT_THRES = readWord(EEPROM_OFFSET+=sizeof(TEMP_DISCHG_LIMIT));
-		REF_LOW_LIMIT = readWord(EEPROM_OFFSET+=sizeof(CURRENT_THRES));
-		REF_HI_LIMIT = readWord(EEPROM_OFFSET+=sizeof(REF_LOW_LIMIT));
-		gi = readWord(EEPROM_OFFSET+=sizeof(REF_HI_LIMIT)) << 8 |
-			readWord(EEPROM_OFFSET+=sizeof(REF_HI_LIMIT) + 1);
-		bi = readWord(EEPROM_OFFSET+=sizeof(gi));
-		EEPROM_OFFSET += sizeof(bi);
+		EEPROM_OFFSET = 0x02;
 		for (i = 0; i < MAX_CELLS; i++) {
-			gv[i] = readWord(EEPROM_OFFSET) << 8 | readWord(EEPROM_OFFSET+1);
-			EEPROM_OFFSET += sizeof(gv[i]);
-			bv[i] = readWord(EEPROM_OFFSET);
-			EEPROM_OFFSET += sizeof(bv[i]);
+			UNDERVOLT_LIMIT[i] = readWord(EEPROM_OFFSET);
+			EEPROM_OFFSET += 2;
+			OVERVOLT_LIMIT[i] = readWord(EEPROM_OFFSET);
+			EEPROM_OFFSET += 2;
+		}
+		CHARGE_RATE_LIMIT = readWord(EEPROM_OFFSET);
+		EEPROM_OFFSET += 2;
+		DISCHG_RATE_LIMIT = readWord(EEPROM_OFFSET);
+		EEPROM_OFFSET += 2;
+		CURRENT_THRES = readWord(EEPROM_OFFSET);
+		EEPROM_OFFSET += 2;
+		TEMP_DISCHG_LIMIT = readWord(EEPROM_OFFSET);
+		EEPROM_OFFSET += 2;
+		TEMP_CHARGE_LIMIT = readWord(EEPROM_OFFSET);
+		EEPROM_OFFSET += 2;
+		REF_LOW_LIMIT = readWord(EEPROM_OFFSET);
+		EEPROM_OFFSET += 2;
+		REF_HI_LIMIT = readWord(EEPROM_OFFSET);
+		EEPROM_OFFSET += 2;
+		if (EEPROM_OFFSET != readWord(0x00)) {
+			// EEPROM problem. existing config doesn't match code version
+			writeWord(0x00, 0xFF); // reset EEPROM
+			initEEPROM();
 		}
 	}
-
-	// Enable High / Low voltage detect (for Vdd)
-	//HLVDCON = 0x3E; // 4.48V - 4.69V brownout, interrupt enabled
-
-	// @todo enable communications busses, store last reset (RCON), etc
 }
 
 void main(void) {
 	unsigned char i ;
 	init();
 	setRedLED();
-
+	
 	// Open ADC port looking at VRef+ pin
-	OpenADC(ADC_FOSC_8 & 
-			ADC_RIGHT_JUST &
-			ADC_16_TAD, 
-			ADC_CH3 &
-			ADC_INT_ON &
-			ADC_REF_VDD_VSS, 
-			ADC_15ANA);
+	/*OpenADC(ADC_FOSC_8 & 
+	 ADC_RIGHT_JUST &
+	 ADC_16_TAD, 
+	 ADC_CH3 &
+	 ADC_INT_ON &
+	 ADC_REF_VDD_VSS, 
+	 ADC_15ANA);*/
+	OpenADC(ADC_CONFIG, ADC_VREF, ADC_15ANA);
 	OpenI2C(MASTER, SLEW_OFF);
 	ConvertADC();
+	initEEPROM();
 	for (i = 0; i < MAX_CELLS; i++) {
 		initTemp(i);
 	}
 	while (BusyADC()); // wait for ADC to complete
 	if (ReadADC() > REF_LOW_LIMIT && ReadADC() < REF_HI_LIMIT) {
 		// Reference is good to go; use it.
-		OpenADC(ADC_FOSC_8 &
-				ADC_RIGHT_JUST &
-				ADC_16_TAD,
-				ADC_CH0 &
-				ADC_INT_ON &
-				ADC_REF_VREFPLUS_VSS,
-				ADC_15ANA);
-			//Delay10TCYx(5); // delay 50 cyc
-			VRef = VREF_DEFAULT;
-			clearRedLED();
-		// @todo change register to operating when it actually starts to
+		ADC_MUX = ADC_CH0 & ADC_INT_ON & ADC_REF_VREFPLUS_VSS;
+		VRef = VREF_DEFAULT;
+		clearRedLED();
 	} else {
 		// Reference is broken, use VDD
-		OpenADC(ADC_FOSC_8 &
-				ADC_RIGHT_JUST &
-				ADC_16_TAD,
-				ADC_CH0 &
-				ADC_INT_ON &
-				ADC_REF_VDD_VSS,
-				ADC_15ANA);
+		ADC_MUX = ADC_CH0 & ADC_INT_ON & ADC_REF_VDD_VSS;
 		STATUS |= SOFT_FAIL;
 		ERROR_REGH |= REF_FAIL;
 		VRef = VDD;
 	}
 	setGreenLED();
 	while (TRUE) {
-		// @todo schedule ADC to do current more often than voltage (interrupts?)
-		//readTemp(CURRENT_CELL, &temp[CURRENT_CELL]); // I2C still broken!
+		// @todo set channel instead
+		OpenADC(ADC_CONFIG, ADC_CURRENT, ADC_15ANA);
+		// @debug implement delay here?
+		ConvertADC();
 		temp[CURRENT_CELL] = readTemp(CURRENT_CELL);
-		//temp[CURRENT_CELL] >>= 4;
 		checkTemp(temp[CURRENT_CELL]);
-	
-		// @todo current
 		if (BusyADC() == FALSE) {
-				clearRedLED();
-				voltage[CURRENT_CELL] = ReadADC();
-				increaseCount();
-				setAddress(CURRENT_CELL);
-				Delay10TCYx(1); // delay after switching
-				ConvertADC();
-				setRedLED();
+			current = ReadADC();
 		}
-		ClearWdt();
+		// @todo set channel instead
+		OpenADC(ADC_CONFIG, ADC_MUX, ADC_15ANA);
+		ConvertADC();
+		checkCurrent(current);
+		if (BusyADC() == FALSE) {
+			voltage[CURRENT_CELL] = ReadADC();
+			increaseCount();
+			setAddress(CURRENT_CELL);
+		}
+		// ClearWDT();
 	}
-		//_asm CLEARWDT _endasm
+	//_asm CLEARWDT _endasm
 	// @todo watchdog and clear it and stuff
 	// NOP sled:
 	//_asm nop _endasm
@@ -287,13 +297,12 @@ void main(void) {
 	//_asm nop _endasm
 	//_asm nop _endasm
 	//_asm nop _endasm
-	//openRelay(); // should never get here
+	// should never get here
 	Reset();
+	setRedLED();
+	clearGreenLED();
+	while (TRUE); // trap condition
 }
-
-//void writeSCI(int x) {
-	//while(UARTIntPutChar(itoa(x)));
-//}
 
 void initTemp(unsigned char address) {
 	char error = 0;
@@ -401,34 +410,41 @@ int floatToInt(auto float x) {
 
 void checkVoltage(unsigned int x) {
 	if (x > OVERVOLT_LIMIT) {
-		STATUS_REG |= FAIL;
 		openRelay();
+		ERROR_REGL |= OVERVOLT;
+		STATUS_REG |= FAIL;
+		setRedLED();
 	} else if (x < UNDERVOLT_LIMIT) {
-		STATUS_REG |= FAIL;
 		openRelay();
+		ERROR_REGL |= UNDERVOLT;
+		STATUS_REG |= FAIL;
+		setRedLED();
 	}
 }
 
-void checkCurrent(signed int x) {
+void checkCurrent(unsigned int x) {
 	if (x < CHARGE_RATE_LIMIT) {
-		STATUS_REG |= FAIL;
-		
 		openRelay();
+		STATUS_REG |= FAIL;
+		ERROR_REGL |= OVERCURRENTIN;
 	} else if (x > DISCHG_RATE_LIMIT) {
-		STATUS_REG |= FAIL;
 		openRelay();
+		STATUS_REG |= FAIL;
+		ERROR_REGL |= OVERCURRENTOUT;
 	}
 }
 
 void checkTemp(signed int x) {
+	/*This function assumes that the discharge limit is greater than the charge
+	limit which should be the case for all battery chemistries.*/
 	if (x > TEMP_DISCHG_LIMIT) {
+		openRelay();
 		STATUS_REG |= FAIL;
 		ERROR_REGL |= OVERTEMP;
-		openRelay();
 	} else if (x > TEMP_CHARGE_LIMIT && STATUS_REG & CHARGING) {
+		openRelay();
 		STATUS_REG |= FAIL;
 		ERROR_REGL |= OVERTEMP;
-		openRelay();
 	}
 }
 
@@ -502,13 +518,13 @@ void writeWord(unsigned char address, unsigned int x) {
 }
 
 unsigned int readWord(unsigned char address) {
-	unsigned int result;
+	/*unsigned int result;
 	unsigned char *ptr = &result;
 	char i;
 	for (i = 0; i < 2; i++) {
 		*(ptr++)=eepromRead(address++);
-	}
-	return result;
+	}*/
+	return (eepromRead(address) << 8) | eepromRead(address + 1);
 }
 
 unsigned char eepromRead(unsigned char address) {
@@ -548,5 +564,5 @@ void reset(void) {
 	ERROR_REGH = 0x00;
 	tempFailCount = 0;
 	tempEnable = 0x00;
-	closeRelay();
+	openRelay();
 }
