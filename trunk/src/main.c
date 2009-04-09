@@ -329,7 +329,8 @@ signed int readTemp(unsigned char address) {
 	unsigned int result;
 	char error = 0;
 	if (!(tempEnable & (1 << address)) >> address) { // check if enabled, if it is, don't select Ta reg again
-		initTemp(address);
+		//initTemp(address);
+		tempEnable |= 1 << address;
 	}
 	IdleI2C();	// make sure bus is idle
 	StartI2C();	// initiate START bus condition
