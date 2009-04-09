@@ -89,8 +89,8 @@ unsigned char tempEnable;
 // Default set points (saved to EEPROM if erased)
 //unsigned int OVERVOLT_LIMIT = 0x035C; // Overvoltage setpoint
 //unsigned int UNDERVOLT_LIMIT = 0x0266; // Undervoltage setpoint
-unsigned int OVERVOLT_LIMIT[MAX_CELLS] = {0x0215, 0x03FF, 0x03FF, 0x03FF, 0x03FF, 0x03FF, 0x03FF, 0x03FF}; //@todo only works for first amp
-unsigned int UNDERVOLT_LIMIT[MAX_CELLS] = {0x00C3, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000}; //@todo enter new values into spreadsheet; these are broken
+unsigned int OVERVOLT_LIMIT[MAX_CELLS] = {0x0203, 0x03FF, 0x03FF, 0x03FF, 0x03FF, 0x03FF, 0x03FF, 0x03FF}; //@todo only works for first amp
+unsigned int UNDERVOLT_LIMIT[MAX_CELLS] = {0x0128, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000}; //@todo enter new values into spreadsheet; these are broken
 unsigned int DISCHG_RATE_LIMIT = 6000; // Overcurrent (discharge) setpoint (mA)
 unsigned int CHARGE_RATE_LIMIT = 3000; // Overcurrent (charge) setpoint (mA)
 unsigned int CURRENT_THRES	= 10; // Threshold of charge / discharge (mA)
