@@ -42,6 +42,7 @@
 #define ADC_VREF			ADC_CH3 & ADC_INT_ON & ADC_REF_VDD_VSS
 #define ADC_CHMUX			ADC_CH0
 #define ADC_CHCURRENT		ADC_CH1
+#define ADC_MUX_DELAY		1
 /*#define ADC_CURRENT			ADC_CH1 & ADC_INT_ON & ADC_REF_VREFPLUS_VSS
  #define ADC_MUX				ADC_CH0 & ADC_INT_ON & ADC_REF_VREFPLUS_VSS
  #define ADC_CURRENT_NOREF	ADC_CH0 & ADC_INT_ON & ADC_REF_VDD_VSS
@@ -73,33 +74,33 @@ void initTemp(unsigned char address);
 void reset(void);
 void failTemp(unsigned char address);
 
-unsigned int VRef;
-unsigned char EEPROM_OFFSET;
-unsigned char CURRENT_CELL;
+unsigned int VRef = VDD;
+unsigned char EEPROM_OFFSET = 0x00;
+unsigned char CURRENT_CELL = 0;
 unsigned char ADC_CURRENT = 0;
 unsigned char ADC_MUX = 0;
 unsigned int voltage[MAX_CELLS];
-unsigned int current;
+unsigned int current = 0;
 unsigned int MAX_TEMP_FAIL = 2; // failures tolerated
 signed int temp[MAX_CELLS];
-unsigned char STATUS_REG;
-unsigned char ERROR_REGL;
-unsigned char ERROR_REGH;
-unsigned char tempFailCount;
-unsigned char tempEnable;
+unsigned char STATUS_REG = 0x00;
+unsigned char ERROR_REGL = 0x00;
+unsigned char ERROR_REGH = 0x0;
+unsigned char tempFailCount = 0;
+unsigned char tempEnable = 0x00;
 
 // Default set points (saved to EEPROM if erased)
 //unsigned int OVERVOLT_LIMIT = 0x035C; // Overvoltage setpoint
 //unsigned int UNDERVOLT_LIMIT = 0x0266; // Undervoltage setpoint
-unsigned int OVERVOLT_LIMIT[MAX_CELLS] = {0x03BE, 0x03FF, 0x03FF, 0x03FF}; //@todo only works for first amp
-unsigned int UNDERVOLT_LIMIT[MAX_CELLS] = {0x0215, 0x0000, 0x0000, 0x0000}; //@todo enter new values into spreadsheet; these are broken
-unsigned int DISCHG_RATE_LIMIT = 6000; // Overcurrent (discharge) setpoint (mA)
-unsigned int CHARGE_RATE_LIMIT = 3000; // Overcurrent (charge) setpoint (mA)
-unsigned int CURRENT_THRES	= 10; // Threshold of charge / discharge (mA)
+unsigned int OVERVOLT_LIMIT[MAX_CELLS] = {0x023E, 0x0265, 0x0259, 0x0257}; //@todo only works for first amp
+unsigned int UNDERVOLT_LIMIT[MAX_CELLS] = {0x013F, 0x0155, 0x0150, 0x014F}; //@todo enter new values into spreadsheet; these are broken
+unsigned int DISCHG_RATE_LIMIT = 0x02AA; // Overcurrent (discharge) setpoint (mA)
+unsigned int CHARGE_RATE_LIMIT = 0x03C1; // Overcurrent (charge) setpoint (mA)
+unsigned int CURRENT_THRES	= 10; // Threshold of charge / discharge (mA) // @todo implement
 unsigned int TEMP_DISCHG_LIMIT = 0x2A00; // Max discharge temperature
 unsigned int TEMP_CHARGE_LIMIT = 0x1E00; // Max charge temperature
-unsigned int REF_LOW_LIMIT = 0x02AE; // Reference too low (mV): ~3247 mV
-unsigned int REF_HI_LIMIT = 0x0299; // Reference too high (mV): ~3349 mV
+unsigned int REF_LOW_LIMIT = 0x0298; // Reference too low (mV): ~3247 mV
+unsigned int REF_HI_LIMIT = 0x02AD; // Reference too high (mV): ~3349 mV
 
 // Voltage input stage calibration factors
 //float gv[MAX_CELLS]; // gain (V/V)
@@ -157,10 +158,14 @@ void init(void) {
 	/*INTCON = 0x04; // Disable global interrupt, enables peripheral interrupt
 	 
 	 // Set up I2C bus
-	 /*SSPSTAT = 0x80; // Disable SMBus & slew rate control
+	 /*SSPSTAT = 0x80; // Disable SMBus & slew rate control*/
 	 // Initialize default cal factor arrays
 	 
-	 /*for (i = 0; i < MAX_CELLS; i++) {	 gv[i] = 1; // gain V/V	 bv[i] = 0; // bias (mV)	 }*/}
+	for (i = 0; i < MAX_CELLS; i++) {
+		voltage[i] = 0;
+		temp[i] = 0;
+	}
+}
 
 void initEEPROM(void) {
 	unsigned char i;
@@ -230,9 +235,9 @@ void main(void) {
 	OpenI2C(MASTER, SLEW_OFF);
 	ConvertADC();
 	initEEPROM();
-	for (i = 0; i < MAX_CELLS; i++) {
+	/*for (i = 0; i < MAX_CELLS; i++) {
 		initTemp(i);
-	}
+	}*/
 	while (BusyADC()); // wait for ADC to complete
 	if (ReadADC() > REF_LOW_LIMIT && ReadADC() < REF_HI_LIMIT) {
 		// Reference is good to go; use it.
@@ -245,28 +250,32 @@ void main(void) {
 		STATUS |= SOFT_FAIL;
 		ERROR_REGH |= REF_FAIL;
 		VRef = VDD;
+		openRelay();
+		//while(TRUE); // @todo new calibrated setpoints needed (store them in EEPROM)
 	}
 	setGreenLED();
 	while (TRUE) {
-		// @todo set channel instead
 		SetChanADC(ADC_CHCURRENT);
-		// @debug implement delay here?
+		Delay10TCYx(ADC_MUX_DELAY); // @todo do we need this?
 		ConvertADC();
-		temp[CURRENT_CELL] = readTemp(CURRENT_CELL);
-		checkTemp(temp[CURRENT_CELL]);
-		if (BusyADC() == FALSE) {
-			current = ReadADC();
+		while (BusyADC()) {
+			//temp[CURRENT_CELL] = readTemp(CURRENT_CELL);
+			//checkTemp(temp[CURRENT_CELL]);
 		}
+		current = ReadADC();
 		SetChanADC(ADC_CHMUX);
-		ConvertADC();
-		checkCurrent(current);
-		if (BusyADC() == FALSE) {
-			voltage[CURRENT_CELL] = ReadADC();
-			increaseCount();
-			setAddress(CURRENT_CELL);
+		/*checkCurrent(current); // @debug*/
+		Delay10TCYx(ADC_MUX_DELAY); // @todo do we need this?
+		while (BusyADC()) {
+			//temp[CURRENT_CELL] = readTemp(CURRENT_CELL);
+			//checkTemp(temp[CURRENT_CELL]);
 		}
-		// ClearWDT();
+		voltage[CURRENT_CELL] = ReadADC();
+		checkVoltage(ReadADC(), CURRENT_CELL);
+		increaseCount();
+		setAddress(CURRENT_CELL);
 	}
+	// ClearWDT();
 	//_asm CLEARWDT _endasm
 	// @todo watchdog and clear it and stuff
 	// NOP sled:
@@ -277,10 +286,10 @@ void main(void) {
 	//_asm nop _endasm
 	//_asm nop _endasm
 	// should never get here
-	Reset();
+	reset();
 	setRedLED();
 	clearGreenLED();
-	while (TRUE); // trap condition
+	// after main method completes, helper file calls it again
 }
 
 void initTemp(unsigned char address) {
@@ -313,28 +322,31 @@ signed int readTemp(unsigned char address) {
 	}
 	IdleI2C();	// make sure bus is idle
 	StartI2C();	// initiate START bus condition
-	while (SSPCON2bits.SEN);
-	IdleI2C();
 	error |= WriteI2C(0x90 | (address  << 1));
-	IdleI2C();
+	IdleI2C(); 
 	error |= WriteI2C(0x00); // Ta Register
 	IdleI2C();
 	RestartI2C();
-	while(SSPCON2bits.RSEN);
 	IdleI2C();
 	error |= WriteI2C(0x91 | (address << 1)); // READ
-	if (error) {
+	/*if (error) {
 		failTemp(address);
-	}
+	}*/
 	IdleI2C();
-	result = ReadI2C() << 8;
+	result = ReadI2C();
+	//result &= 0x7f; // mask sign bit?
+	result <<= 8;
+	IdleI2C();
 	AckI2C();
-	result += ReadI2C();
+	IdleI2C();
+	result |= ReadI2C();
+	IdleI2C();
+	//error |= getsI2C(&result, 2);
+	//error |= getsI2C(result, 1);
 	//getsI2C(*data, 2); // grab length bytes from bus	result = ReadI2C() << 8;	AckI2C();	IdleI2C();	result |= ReadI2C();	NotAckI2C(); // send EOD bus condition
 	NotAckI2C();
-	while (SSPCON2bits.ACKEN);
+	IdleI2C();
 	StopI2C();
-	while (SSPCON2bits.PEN);
 	return result;
 }
 
@@ -407,10 +419,12 @@ void checkCurrent(unsigned int x) {
 		openRelay();
 		STATUS_REG |= FAIL;
 		ERROR_REGL |= OVERCURRENTIN;
+		setRedLED();
 	} else if (x > DISCHG_RATE_LIMIT) {
 		openRelay();
 		STATUS_REG |= FAIL;
 		ERROR_REGL |= OVERCURRENTOUT;
+		setRedLED();
 	}
 }
 
@@ -450,7 +464,7 @@ void setAddress(unsigned char address) {
 }
 
 void increaseCount(void) {
-	if (CURRENT_CELL < MAX_CELLS) {
+	if (CURRENT_CELL < MAX_CELLS - 1) {
 		CURRENT_CELL++;
 	} else {
 		// wrap
