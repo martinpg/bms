@@ -114,9 +114,9 @@ void init(void) {
 	// Initialize clock
 	// OSCCON<6:4>=111 or 110
 	// FOSC3:FOSC0=1001 or 1000
-	// 0b111100?0
-	OSCCON = 0xF2;
-	OSCTUNE |= 0xC0;
+	// 0b011100?0
+	OSCCON |= 0xF2;
+	OSCTUNE |= 0x40; //enable pll for intosc
 	//SSPADD = 0x13;
 	
 	// Initialize global variables
@@ -152,13 +152,14 @@ void init(void) {
 	//				5 - Relay Enable (active high)
 	//				6 - Serial TX
 	//				7 - Serial RX
-	TRISC = 0x98;
+	TRISC = 0x80;
 	
 	// Set up interrupts
 	/*INTCON = 0x04; // Disable global interrupt, enables peripheral interrupt
 	 
 	 // Set up I2C bus
 	 /*SSPSTAT = 0x80; // Disable SMBus & slew rate control*/
+	SSPADD = 0xff;
 	 // Initialize default cal factor arrays
 	 
 	for (i = 0; i < MAX_CELLS; i++) {
@@ -233,6 +234,7 @@ void main(void) {
 	// Open ADC port looking at VRef+ pin
 	OpenADC(ADC_CONFIG, ADC_VREF, ADC_15ANA);
 	OpenI2C(MASTER, SLEW_OFF);
+	SSPADD = 0x28;
 	ConvertADC();
 	initEEPROM();
 	/*for (i = 0; i < MAX_CELLS; i++) {
@@ -259,7 +261,7 @@ void main(void) {
 		Delay10TCYx(ADC_MUX_DELAY); // @todo do we need this?
 		ConvertADC();
 		while (BusyADC()) {
-			//temp[CURRENT_CELL] = readTemp(CURRENT_CELL);
+			temp[CURRENT_CELL] = readTemp(CURRENT_CELL);
 			//checkTemp(temp[CURRENT_CELL]);
 		}
 		current = ReadADC();
@@ -314,24 +316,33 @@ void initTemp(unsigned char address) {
 }
 
 signed int readTemp(unsigned char address) {
-	unsigned int result;
-	char error = 0;
-	if (!(tempEnable & (1 << address)) >> address) { // check if enabled, if it is, don't select Ta reg again
+	unsigned int result = 0;
+	/*if (!(tempEnable & (1 << address)) >> address) { // check if enabled, if it is, don't select Ta reg again
 		//initTemp(address);
+		tempEnable |= 1 << address;
+	}*/
+	if ((1 << address) & tempEnable == (1 << address)) {
 		tempEnable |= 1 << address;
 	}
 	IdleI2C();	// make sure bus is idle
 	StartI2C();	// initiate START bus condition
-	error |= WriteI2C(0x90 | (address  << 1));
-	IdleI2C(); 
-	error |= WriteI2C(0x00); // Ta Register
 	IdleI2C();
-	RestartI2C();
-	IdleI2C();
-	error |= WriteI2C(0x91 | (address << 1)); // READ
-	/*if (error) {
+	if (WriteI2C(0x90 | (address  << 1) | 1) == 0) {
+		IdleI2C();
+		result = ReadI2C();
+		result <<= 8;
+		IdleI2C();
+		AckI2C();
+		IdleI2C();
+		result |= ReadI2C();
+		IdleI2C();
+		NotAckI2C();
+		IdleI2C();
+	} else {
 		failTemp(address);
-	}*/
+	}
+	StopI2C();
+	/*
 	IdleI2C();
 	result = ReadI2C();
 	//result &= 0x7f; // mask sign bit?
@@ -346,7 +357,7 @@ signed int readTemp(unsigned char address) {
 	//getsI2C(*data, 2); // grab length bytes from bus	result = ReadI2C() << 8;	AckI2C();	IdleI2C();	result |= ReadI2C();	NotAckI2C(); // send EOD bus condition
 	NotAckI2C();
 	IdleI2C();
-	StopI2C();
+	StopI2C();*/
 	return result;
 }
 
