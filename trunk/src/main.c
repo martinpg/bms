@@ -29,50 +29,8 @@
 #include <i2c.h>
 #include <stdlib.h>
 #include "status.h"
-
-#define TRUE	1
-#define FALSE	0
-#define ADC_RESOLUTION		1024 // 10 bits
-#define	VDD					5000 // mV
-#define VREF_DEFAULT		3300 // mV
-#define MAX_CELLS 			4
-#define MAX_TEMP_FAILS		2
-#define TEMP_CONFIG_REG		0x00
-#define ADC_CONFIG			ADC_FOSC_8 & ADC_RIGHT_JUST & ADC_16_TAD
-#define ADC_VREF			ADC_CH3 & ADC_INT_ON & ADC_REF_VDD_VSS
-#define ADC_CHMUX			ADC_CH0
-#define ADC_CHCURRENT		ADC_CH1
-#define ADC_MUX_DELAY		1
-/*#define ADC_CURRENT			ADC_CH1 & ADC_INT_ON & ADC_REF_VREFPLUS_VSS
- #define ADC_MUX				ADC_CH0 & ADC_INT_ON & ADC_REF_VREFPLUS_VSS
- #define ADC_CURRENT_NOREF	ADC_CH0 & ADC_INT_ON & ADC_REF_VDD_VSS
- #define ADC_MUX_NOREF		ADC_CH0 & ADC_INT_ON & ADC_REF_VDD_VSS*/
-
-void init(void);
-void main(void);
-void setAddress(unsigned char address);
-void toggleRedLED(void);
-void setRedLED(void);
-void clearRedLED(void);
-void toggleGreenLED(void);
-void setGreenLED(void);
-void clearGreenLED(void);
-void increaseCount(void);
-void openRelay(void);
-void closeRelay(void);
-void checkVoltage(unsigned int x, unsigned int address);
-void checkCurrent(unsigned int x);
-void checkTemp(signed int x);
-void interruptHandlerHigh (void);
-void writeWord(unsigned char address, unsigned int x);
-unsigned int readWord(unsigned char address);
-void eepromWrite(unsigned char address, unsigned char x);
-unsigned char eepromRead(unsigned char address);
-void initEEPROM(void);
-signed int readTemp(unsigned char address);
-void initTemp(unsigned char address);
-void reset(void);
-void failTemp(unsigned char address);
+#include "main.h"
+#include "UARTIntC.h"
 
 unsigned int VRef = VDD;
 unsigned char EEPROM_OFFSET = 0x00;
@@ -237,6 +195,7 @@ void main(void) {
 	SSPADD = 0x28;
 	ConvertADC();
 	initEEPROM();
+	UARTIntInit();
 	/*for (i = 0; i < MAX_CELLS; i++) {
 		initTemp(i);
 	}*/
@@ -257,6 +216,7 @@ void main(void) {
 	}
 	setGreenLED();
 	while (TRUE) {
+		UARTIntPutChar('$');
 		SetChanADC(ADC_CHCURRENT);
 		Delay10TCYx(ADC_MUX_DELAY); // @todo do we need this?
 		ConvertADC();
@@ -294,36 +254,49 @@ void main(void) {
 	// after main method completes, helper file calls it again
 }
 
-void initTemp(unsigned char address) {
-	char error = 0;
+char initTemp(unsigned char address) {
 	IdleI2C();
 	StartI2C();
-	while (SSPCON2bits.SEN);
 	IdleI2C();
-	error |= WriteI2C(0x90 | (address << 1));
-	IdleI2C();
-	error |= WriteI2C(0x01); // select CONFIG register
-	IdleI2C();
-	error |= WriteI2C(TEMP_CONFIG_REG);
-	if (error) {
+	if (WriteI2C(0x90 | (1 << address)) != 0) {
 		failTemp(address);
-	} else {
-		tempEnable |= 1 << address;
+		return -1;
 	}
 	IdleI2C();
+	if (WriteI2C(0x01) != 0) { // select CONFIG register
+		failTemp(address);
+		return -2;
+	}
+	IdleI2C();
+	if (WriteI2C(TEMP_CONFIG_REG) != 0) {
+		failTemp(address);
+		return -3;
+	}
+	IdleI2C();
+	/*StopI2C();
+	IdleI2C();
+	StartI2C();*/
+	RestartI2C();
+	IdleI2C();
+	if (WriteI2C(0x91 | (1 << address) != 0)) {
+		failTemp(address);
+		return -4;
+	}
+	IdleI2C();
+	if (WriteI2C(0x00)) { // temp reg
+		failTemp(address);
+		return -5;
+	}
 	StopI2C();
-	while (SSPCON2bits.PEN);
+	return 0;
 }
 
 signed int readTemp(unsigned char address) {
 	unsigned int result = 0;
-	/*if (!(tempEnable & (1 << address)) >> address) { // check if enabled, if it is, don't select Ta reg again
-		//initTemp(address);
-		tempEnable |= 1 << address;
-	}*/
-	if ((1 << address) & tempEnable == (1 << address)) {
-		tempEnable |= 1 << address;
-	}
+	///*if (!(tempEnable & (1 << address)) >> address) { // check if enabled, if it is, don't select Ta reg again
+	//	if (initTemp(address) == 0)
+	//		tempEnable |= 1 << address;
+	//}*/
 	IdleI2C();	// make sure bus is idle
 	StartI2C();	// initiate START bus condition
 	IdleI2C();
@@ -342,22 +315,6 @@ signed int readTemp(unsigned char address) {
 		failTemp(address);
 	}
 	StopI2C();
-	/*
-	IdleI2C();
-	result = ReadI2C();
-	//result &= 0x7f; // mask sign bit?
-	result <<= 8;
-	IdleI2C();
-	AckI2C();
-	IdleI2C();
-	result |= ReadI2C();
-	IdleI2C();
-	//error |= getsI2C(&result, 2);
-	//error |= getsI2C(result, 1);
-	//getsI2C(*data, 2); // grab length bytes from bus	result = ReadI2C() << 8;	AckI2C();	IdleI2C();	result |= ReadI2C();	NotAckI2C(); // send EOD bus condition
-	NotAckI2C();
-	IdleI2C();
-	StopI2C();*/
 	return result;
 }
 
