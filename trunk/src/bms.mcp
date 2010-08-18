@@ -124,7 +124,7 @@ file_030=no
 file_031=no
 [FILE_INFO]
 file_000=main.c
-file_001=FreeRTOSSource\list.c
+file_001=FreeRTOS\Source\list.c
 file_002=FreeRTOS\Source\queue.c
 file_003=FreeRTOS\Source\croutine.c
 file_004=FreeRTOS\Source\portable\PIC18\__freelist.c
