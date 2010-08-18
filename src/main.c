@@ -192,6 +192,7 @@ void main( void ) {
 			printf(".");
 		#endif
 	}
+	OpenADC(ADC_CONFIG, ADV_V
 	if (ReadADC() > REF_LOW_LIMIT && ReadADC() < REF_HI_LIMIT) {
 		// Reference is good to go; use it.
 		ADC_MUX = ADC_VREF_EXT1;
@@ -558,150 +559,147 @@ void tskWriteEEPROM( void *params ) {
 	}
 }
 
-	unsigned char parse(char* s) {
-		if (strcmp(s, txtSTATUS) == 0) {
-			return cmdSTATUS;
-		} else if (strcmp(s, txtRCVMSGS) == 0) {
-			return cmdRCVMSGS;
-		} else if (strcmp(s, txtCLOSE_RELAY) == 0) {
-			return cmdCLOSE_RELAY;
-		} else if (strcmp(s, txtOPEN_RELAY) == 0) {
-			return cmdOPEN_RELAY;
-		} else if (strcmp(s, txtRED_ON) == 0) {
-			return cmdRED_ON;
-		} else if (strcmp(s, txtRED_OFF) == 0) {
-			return cmdRED_OFF;
-		} else if (strcmp(s, txtGREEN_ON) == 0) {
-			return cmdGREEN_ON;
-		} else if (strcmp(s, txtGREEN_OFF) == 0) {
-			return cmdGREEN_OFF;
-		} else if (strcmp(s, txtGET_VALUE) == 0) {
-			return cmdGET_VALUE;
-		} else if (strcmp(s, txtSU) == 0) {
-			return cmdSU;
-		} else if (strcmp(s, txtSU_OFF) == 0) {
-			return cmdSU_OFF;
-		}
-		return -1; // shouldn't get here
+unsigned char parse(char* s) {
+	if (strcmp(s, txtSTATUS) == 0) {
+		return cmdSTATUS;
+	} else if (strcmp(s, txtRCVMSGS) == 0) {
+		return cmdRCVMSGS;
+	} else if (strcmp(s, txtCLOSE_RELAY) == 0) {
+		return cmdCLOSE_RELAY;
+	} else if (strcmp(s, txtOPEN_RELAY) == 0) {
+		return cmdOPEN_RELAY;
+	} else if (strcmp(s, txtRED_ON) == 0) {
+		return cmdRED_ON;
+	} else if (strcmp(s, txtRED_OFF) == 0) {
+		return cmdRED_OFF;
+	} else if (strcmp(s, txtGREEN_ON) == 0) {
+		return cmdGREEN_ON;
+	} else if (strcmp(s, txtGREEN_OFF) == 0) {
+		return cmdGREEN_OFF;
+	} else if (strcmp(s, txtGET_VALUE) == 0) {
+		return cmdGET_VALUE;
+	} else if (strcmp(s, txtSU) == 0) {
+		return cmdSU;
+	} else if (strcmp(s, txtSU_OFF) == 0) {
+		return cmdSU_OFF;
 	}
-	
-	void tskUI( void *params ) {
-		static unsigned char *prompt;
-		unsigned char uiState = 0x00;
-		typedef struct {
-			unsigned char cmd;
-			unsigned op:1;
-			unsigned su:1;
-			unsigned :6;
-		} command;
-		command cmd = {NULL, NULL, NULL};
-		unsigned char buffer[uiBUFFER_SIZE];
-		unsigned char *buf;
-		#ifdef DEBUG_CONSOLE
-			printf("Starting UI...");
-		#endif
-		buf = (void *) &buffer;
-		prompt = (void *) &uiPROMPT;
-		for (i = 0; i < uiBUFFER_SIZE; i++) {
-			buffer[i] = 0; // @todo lcean this up
-		}
-		#ifdef DEBUG_CONSOLE
-			printf("done!\r\n");
-		#endif
-		while (1) {
-			switch(uiState) {
-				case 0x00:
-					// wait for reception of anything
-					//xSerialGetChar( xSerial, buf, 10);
-					while (!DataRdyUSART());
-					*buf = getcUSART();
-					uiState |= (*buf != 0 && *buf != 0xff);
-					break;
-				case 0x01:
-					// display prompt
-					printf("\r\n%s", prompt);
-					uiState = 0x02;
-					break;
-				case 0x02:
-					// wait / receive command
-					while (!DataRdyUSART());
-					*buf = getcUSART();
-					printf("%c", *buf);
-					if (*buf == 0x0D) {
-						*buf = 0x00;
-						cmd.cmd = parse(&buffer);
-						buf = (void *) &buffer;
-						uiState = 0x03;
-					} else if ((int) buf - (int) &buffer >= uiBUFFER_SIZE) {
-						buf = (void *) &buffer;
-						for (i = 0; i < uiBUFFER_SIZE; i++) {
-							buffer[i] = 0; // @todo clean this up
-						}
-						printf("\r\nInvalid command!\r\n");
-						uiState = 0x01;
-					} else {
-						buf++;
+	return -1; // shouldn't get here
+}
+
+void tskUI( void *params ) {
+	static unsigned char *prompt;
+	unsigned char uiState = 0x00;
+	typedef struct {
+		unsigned char cmd;
+		unsigned op:1;
+		unsigned su:1;
+		unsigned :6;
+	} command;
+	command cmd = {NULL, NULL, NULL};
+	unsigned char buffer[uiBUFFER_SIZE];
+	unsigned char *buf;
+	#ifdef DEBUG_CONSOLE
+		printf("Starting UI...");
+	#endif
+	buf = (void *) &buffer;
+	prompt = (void *) &uiPROMPT;
+	for (i = 0; i < uiBUFFER_SIZE; i++) {
+		buffer[i] = 0; // @todo lcean this up
+	}
+	#ifdef DEBUG_CONSOLE
+		printf("done!\r\n");
+	#endif
+	while (1) {
+		switch(uiState) {
+			case 0x00:
+				// wait for reception of anything
+				//xSerialGetChar( xSerial, buf, 10);
+				while (!DataRdyUSART());
+				*buf = getcUSART();
+				uiState |= (*buf != 0 && *buf != 0xff);
+				break;
+			case 0x01:
+				// display prompt
+				printf("\r\n%s", prompt);
+				uiState = 0x02;
+				break;
+			case 0x02:
+				// wait / receive command
+				while (!DataRdyUSART());
+				*buf = getcUSART();
+				printf("%c", *buf);
+				if (*buf == 0x0D) {
+					*buf = 0x00;
+					cmd.cmd = parse(&buffer);
+					buf = (void *) &buffer;
+					uiState = 0x03;
+				} else if ((int) buf - (int) &buffer >= uiBUFFER_SIZE) {
+					buf = (void *) &buffer;
+					for (i = 0; i < uiBUFFER_SIZE; i++) {
+						buffer[i] = 0; // @todo clean this up
 					}
+					printf("\r\nInvalid command!\r\n");
+					uiState = 0x01;
+				} else {
+					buf++;
+				}
+				break;
+			case 0x03:
+				uiState = 0;
+				// process command
+				if ((cmd.cmd & uiSU_REQD) >> 4 & STATUS_REGbits.sSU) {
 					break;
-				case 0x03:
-					uiState = 0;
-					// process command
-					if ((cmd.cmd & uiSU_REQD) >> 4 & STATUS_REGbits.sSU) {
+					cmd.cmd = cmdSU_OFF;
+					// @todo generate error
+				}
+				switch(cmd.cmd) {
+					case cmdSTATUS:
+						printDump();
 						break;
-						cmd.cmd = cmdSU_OFF;
-						// @todo generate error
-					}
-					switch(cmd.cmd) {
-						case cmdSTATUS:
-							printDump();
-							break;
-						case cmdRCVMSGS:
-							break;
-						case cmdCLOSE_RELAY:
-							closeRelay();
-							break;
-						case cmdOPEN_RELAY:
-							openRelay();
-							break;
-						case cmdRED_ON:
-							setRedLED();
-							break;
-						case cmdRED_OFF:
-							clearRedLED();
-							break;
-						case cmdGREEN_ON:
-							setGreenLED();
-							break;
-						case cmdGREEN_OFF:
-							clearGreenLED();
-							break;
-						case cmdGET_VALUE:
-							uiState = 0x04;
-							break;
-						case cmdSU:
-							prompt = (void *) &uiPROMPT_SU;
-							STATUS_REGbits.sSU = 1;
-							break;
-						case cmdSU_OFF:
-							prompt = (void *) &uiPROMPT;
-							STATUS_REGbits.sSU = 0;
-							break;
-						default:
-							printf("Unknown command!\r\n");
-							uiState = 0x01;
-							break;
-					}
-					uiState = 0x01;
-					break;
-				case 0x04:
-					uiState = 0x01;
-					break;
-				default:
-					uiState = 0x01;
-					break;
-			}
+					case cmdRCVMSGS:
+						break;
+					case cmdCLOSE_RELAY:
+						closeRelay();
+						break;
+					case cmdOPEN_RELAY:
+						openRelay();
+						break;
+					case cmdRED_ON:
+						setRedLED();
+						break;
+					case cmdRED_OFF:
+						clearRedLED();
+						break;
+					case cmdGREEN_ON:
+						setGreenLED();
+						break;
+					case cmdGREEN_OFF:
+						clearGreenLED();
+						break;
+					case cmdGET_VALUE:
+						uiState = 0x04;
+						break;
+					case cmdSU:
+						prompt = (void *) &uiPROMPT_SU;
+						STATUS_REGbits.sSU = 1;
+						break;
+					case cmdSU_OFF:
+						prompt = (void *) &uiPROMPT;
+						STATUS_REGbits.sSU = 0;
+						break;
+					default:
+						printf("Unknown command!\r\n");
+						uiState = 0x01;
+						break;
+				}
+				uiState = 0x01;
+				break;
+			default:
+				uiState = 0x01;
+				break;
 		}
 	}
+}
 
 void tskCheck( void *params ) {
 	message msg;
