@@ -1,0 +1,3276 @@
+MPASM  5.35                          FREE.ASM   8-13-2010  14:45:03         PAGE  1
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+                      00001 ;===============================================================================
+                      00002 ; This file is part of "Heap Management For Small Microcontrollers".
+                      00003 ; v1.04 (2009-05-23)
+                      00004 ; isaacbavaresco@yahoo.com.br
+                      00005 ;===============================================================================
+                      00006 ; Copyright (c) 2007-2009, Isaac Marino Bavaresco
+                      00007 ; All rights reserved.
+                      00008 ;
+                      00009 ; Redistribution and use in source and binary forms, with or without
+                      00010 ; modification, are permitted provided that the following conditions are met:
+                      00011 ;     * Redistributions of source code must retain the above copyright
+                      00012 ;       notice, this list of conditions and the following disclaimer.
+                      00013 ;     * Neither the name of the author nor the
+                      00014 ;       names of its contributors may be used to endorse or promote products
+                      00015 ;       derived from this software without specific prior written permission.
+                      00016 ;
+                      00017 ; THIS SOFTWARE IS PROVIDED BY THE AUTHOR ''AS IS'' AND ANY
+                      00018 ; EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+                      00019 ; WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+                      00020 ; DISCLAIMED. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY
+                      00021 ; DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+                      00022 ; (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+                      00023 ; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+                      00024 ; ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+                      00025 ; (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+                      00026 ; SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+                      00027 ;===============================================================================
+                      00028 #include <P18CXXX.INC>
+                      00001         LIST
+                      00002 ; P18CXXX.INC  Standard Header File, Microchip Technology, Inc.
+                      00001         LIST
+                      00002 
+                      00003 ;==========================================================================
+                      00004 ;  MPASM PIC18F2680 processor include
+                      00005 ; 
+                      00006 ;  (c) Copyright 1999-2007 Microchip Technology, All rights reserved
+                      00007 ;==========================================================================
+                      00008 
+                      04591         LIST
+                      00207   ENDIF
+                      00208   IFDEF __18F2682
+                      00209      INCLUDE <p18F2682.INC>
+                      00210   ENDIF
+                      00211   IFDEF __18F2685
+                      00212      INCLUDE <p18F2685.INC>
+                      00213   ENDIF
+                      00214   IFDEF __18F26J11
+                      00215      INCLUDE <p18F26J11.INC>
+                      00216   ENDIF
+                      00217   IFDEF __18F26J13
+                      00218      INCLUDE <p18F26J13.INC>
+                      00219   ENDIF
+                      00220   IFDEF __18F26J50
+MPASM  5.35                          FREE.ASM   8-13-2010  14:45:03         PAGE  2
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+                      00221      INCLUDE <p18F26J50.INC>
+                      00222   ENDIF
+                      00223   IFDEF __18F26J53
+                      00224      INCLUDE <p18F26J53.INC>
+                      00225   ENDIF
+                      00226   IFDEF __18F26K20
+                      00227      INCLUDE <p18F26K20.INC>
+                      00228   ENDIF
+                      00229   IFDEF __18F26K22
+                      00230      INCLUDE <p18F26K22.INC>
+                      00231   ENDIF
+                      00232   IFDEF __18F26K80
+                      00233      INCLUDE <p18F26K80.INC>
+                      00234   ENDIF
+                      00235   IFDEF __18F27J13
+                      00236      INCLUDE <p18F27J13.INC>
+                      00237   ENDIF
+                      00238   IFDEF __18F27J53
+                      00239      INCLUDE <p18F27J53.INC>
+                      00240   ENDIF
+                      00241   IFDEF __18F4220
+                      00242      INCLUDE <p18F4220.INC>
+                      00243   ENDIF
+                      00244   IFDEF __18F4221
+                      00245      INCLUDE <p18F4221.INC>
+                      00246   ENDIF
+                      00247   IFDEF __18F4320
+                      00248      INCLUDE <p18F4320.INC>
+                      00249   ENDIF
+                      00250   IFDEF __18F4321
+                      00251      INCLUDE <p18F4321.INC>
+                      00252   ENDIF
+                      00253   IFDEF __18F4331
+                      00254      INCLUDE <p18F4331.INC>
+                      00255   ENDIF
+                      00256   IFDEF __18F43K20
+                      00257      INCLUDE <p18F43K20.INC>
+                      00258   ENDIF
+                      00259   IFDEF __18F43K22
+                      00260      INCLUDE <p18F43K22.INC>
+                      00261   ENDIF
+                      00262   IFDEF __18F4410
+                      00263      INCLUDE <p18F4410.INC>
+                      00264   ENDIF
+                      00265   IFDEF __18F442
+                      00266      INCLUDE <p18F442.INC>
+                      00267   ENDIF
+                      00268   IFDEF __18F4420
+                      00269      INCLUDE <p18F4420.INC>
+                      00270   ENDIF
+                      00271   IFDEF __18F4423
+                      00272      INCLUDE <p18F4423.INC>
+                      00273   ENDIF
+MPASM  5.35                          FREE.ASM   8-13-2010  14:45:03         PAGE  3
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+                      00274   IFDEF __18F4431
+                      00275      INCLUDE <p18F4431.INC>
+                      00276   ENDIF
+                      00277   IFDEF __18F4439
+                      00278      INCLUDE <p18F4439.INC>
+                      00279   ENDIF
+                      00280   IFDEF __18F4450
+                      00281      INCLUDE <p18F4450.INC>
+                      00282   ENDIF
+                      00283   IFDEF __18F4455
+                      00284      INCLUDE <p18F4455.INC>
+                      00285   ENDIF
+                      00286   IFDEF __18F4458
+                      00287      INCLUDE <p18F4458.INC>
+                      00288   ENDIF
+                      00289   IFDEF __18F448
+                      00290      INCLUDE <p18F448.INC>
+                      00291   ENDIF
+                      00292   IFDEF __18F4480
+                      00293      INCLUDE <p18F4480.INC>
+                      00294   ENDIF
+                      00295   IFDEF __18F44J10
+                      00296      INCLUDE <p18F44J10.INC>
+                      00297   ENDIF
+                      00298   IFDEF __18F44J11
+                      00299      INCLUDE <p18F44J11.INC>
+                      00300   ENDIF
+                      00301   IFDEF __18F44J50
+                      00302      INCLUDE <p18F44J50.INC>
+                      00303   ENDIF
+                      00304   IFDEF __18F44K20
+                      00305      INCLUDE <p18F44K20.INC>
+                      00306   ENDIF
+                      00307   IFDEF __18F44K22
+                      00308      INCLUDE <p18F44K22.INC>
+                      00309   ENDIF
+                      00310   IFDEF __18F4510
+                      00311      INCLUDE <p18F4510.INC>
+                      00312   ENDIF
+                      00313   IFDEF __18F4515
+                      00314      INCLUDE <p18F4515.INC>
+                      00315   ENDIF
+                      00316   IFDEF __18F452
+                      00317      INCLUDE <p18F452.INC>
+                      00318   ENDIF
+                      00319   IFDEF __18F4520
+                      00320      INCLUDE <p18F4520.INC>
+                      00321   ENDIF
+                      00322   IFDEF __18F4523
+                      00323      INCLUDE <p18F4523.INC>
+                      00324   ENDIF
+                      00325   IFDEF __18F4525
+                      00326      INCLUDE <p18F4525.INC>
+MPASM  5.35                          FREE.ASM   8-13-2010  14:45:03         PAGE  4
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+                      00327   ENDIF
+                      00328   IFDEF __18F4539
+                      00329      INCLUDE <p18F4539.INC>
+                      00330   ENDIF
+                      00331   IFDEF __18F4550
+                      00332      INCLUDE <p18F4550.INC>
+                      00333   ENDIF
+                      00334   IFDEF __18F4553
+                      00335      INCLUDE <p18F4553.INC>
+                      00336   ENDIF
+                      00337   IFDEF __18F458
+                      00338      INCLUDE <p18F458.INC>
+                      00339   ENDIF
+                      00340   IFDEF __18F4580
+                      00341      INCLUDE <p18F4580.INC>
+                      00342   ENDIF
+                      00343   IFDEF __18F4585
+                      00344      INCLUDE <p18F4585.INC>
+                      00345   ENDIF
+                      00346   IFDEF __18F45J10
+                      00347      INCLUDE <p18F45J10.INC>
+                      00348   ENDIF
+                      00349   IFDEF __18F45J11
+                      00350      INCLUDE <p18F45J11.INC>
+                      00351   ENDIF
+                      00352   IFDEF __18F45J50
+                      00353      INCLUDE <p18F45J50.INC>
+                      00354   ENDIF
+                      00355   IFDEF __18F45K20
+                      00356      INCLUDE <p18F45K20.INC>
+                      00357   ENDIF
+                      00358   IFDEF __18F45K22
+                      00359      INCLUDE <p18F45K22.INC>
+                      00360   ENDIF
+                      00361   IFDEF __18F45K80
+                      00362      INCLUDE <p18F45K80.INC>
+                      00363   ENDIF
+                      00364   IFDEF __18F4610
+                      00365      INCLUDE <p18F4610.INC>
+                      00366   ENDIF
+                      00367   IFDEF __18F4620
+                      00368      INCLUDE <p18F4620.INC>
+                      00369   ENDIF
+                      00370   IFDEF __18F4680
+                      00371      INCLUDE <p18F4680.INC>
+                      00372   ENDIF
+                      00373   IFDEF __18F4682
+                      00374      INCLUDE <p18F4682.INC>
+                      00375   ENDIF
+                      00376   IFDEF __18F4685
+                      00377      INCLUDE <p18F4685.INC>
+                      00378   ENDIF
+                      00379   IFDEF __18F46J11
+MPASM  5.35                          FREE.ASM   8-13-2010  14:45:03         PAGE  5
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+                      00380      INCLUDE <p18F46J11.INC>
+                      00381   ENDIF
+                      00382   IFDEF __18F46J13
+                      00383      INCLUDE <p18F46J13.INC>
+                      00384   ENDIF
+                      00385   IFDEF __18F46J50
+                      00386      INCLUDE <p18F46J50.INC>
+                      00387   ENDIF
+                      00388   IFDEF __18F46J53
+                      00389      INCLUDE <p18F46J53.INC>
+                      00390   ENDIF
+                      00391   IFDEF __18F46K20
+                      00392      INCLUDE <p18F46K20.INC>
+                      00393   ENDIF
+                      00394   IFDEF __18F46K22
+                      00395      INCLUDE <p18F46K22.INC>
+                      00396   ENDIF
+                      00397   IFDEF __18F46K80
+                      00398      INCLUDE <p18F46K80.INC>
+                      00399   ENDIF
+                      00400   IFDEF __18F47J13
+                      00401      INCLUDE <p18F47J13.INC>
+                      00402   ENDIF
+                      00403   IFDEF __18F47J53
+                      00404      INCLUDE <p18F47J53.INC>
+                      00405   ENDIF
+                      00406   IFDEF __18F6310
+                      00407      INCLUDE <p18F6310.INC>
+                      00408   ENDIF
+                      00409   IFDEF __18F6390
+                      00410      INCLUDE <p18F6390.INC>
+                      00411   ENDIF
+                      00412   IFDEF __18F6393
+                      00413      INCLUDE <p18F6393.INC>
+                      00414   ENDIF
+                      00415   IFDEF __18F63J11
+                      00416      INCLUDE <p18F63J11.INC>
+                      00417   ENDIF
+                      00418   IFDEF __18F63J90
+                      00419      INCLUDE <p18F63J90.INC>
+                      00420   ENDIF
+                      00421   IFDEF __18F6410
+                      00422      INCLUDE <p18F6410.INC>
+                      00423   ENDIF
+                      00424   IFDEF __18F6490
+                      00425      INCLUDE <p18F6490.INC>
+                      00426   ENDIF
+                      00427   IFDEF __18F6493
+                      00428      INCLUDE <p18F6493.INC>
+                      00429   ENDIF
+                      00430   IFDEF __18F64J11
+                      00431      INCLUDE <p18F64J11.INC>
+                      00432   ENDIF
+MPASM  5.35                          FREE.ASM   8-13-2010  14:45:03         PAGE  6
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+                      00433   IFDEF __18F64J90
+                      00434      INCLUDE <p18F64J90.INC>
+                      00435   ENDIF
+                      00436   IFDEF __18F6520
+                      00437      INCLUDE <p18F6520.INC>
+                      00438   ENDIF
+                      00439   IFDEF __18F6525
+                      00440      INCLUDE <p18F6525.INC>
+                      00441   ENDIF
+                      00442   IFDEF __18F6527
+                      00443      INCLUDE <p18F6527.INC>
+                      00444   ENDIF
+                      00445   IFDEF __18F6585
+                      00446      INCLUDE <p18F6585.INC>
+                      00447   ENDIF
+                      00448   IFDEF __18F65J10
+                      00449      INCLUDE <p18F65J10.INC>
+                      00450   ENDIF
+                      00451   IFDEF __18F65J11
+                      00452      INCLUDE <p18F65J11.INC>
+                      00453   ENDIF
+                      00454   IFDEF __18F65J15
+                      00455      INCLUDE <p18F65J15.INC>
+                      00456   ENDIF
+                      00457   IFDEF __18F65J50
+                      00458      INCLUDE <p18F65J50.INC>
+                      00459   ENDIF
+                      00460   IFDEF __18F65J90
+                      00461      INCLUDE <p18F65J90.INC>
+                      00462   ENDIF
+                      00463   IFDEF __18F65K22
+                      00464      INCLUDE <p18F65K22.INC>
+                      00465   ENDIF
+                      00466   IFDEF __18F65K80
+                      00467      INCLUDE <p18F65K80.INC>
+                      00468   ENDIF
+                      00469   IFDEF __18F65K90
+                      00470      INCLUDE <p18F65K90.INC>
+                      00471   ENDIF
+                      00472   IFDEF __18F6620
+                      00473      INCLUDE <p18F6620.INC>
+                      00474   ENDIF
+                      00475   IFDEF __18F6621
+                      00476      INCLUDE <p18F6621.INC>
+                      00477   ENDIF
+                      00478   IFDEF __18F6622
+                      00479      INCLUDE <p18F6622.INC>
+                      00480   ENDIF
+                      00481   IFDEF __18F6627
+                      00482      INCLUDE <p18F6627.INC>
+                      00483   ENDIF
+                      00484   IFDEF __18F6628
+                      00485      INCLUDE <p18F6628.INC>
+MPASM  5.35                          FREE.ASM   8-13-2010  14:45:03         PAGE  7
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+                      00486   ENDIF
+                      00487   IFDEF __18F6680
+                      00488      INCLUDE <p18F6680.INC>
+                      00489   ENDIF
+                      00490   IFDEF __18F66J10
+                      00491      INCLUDE <p18F66J10.INC>
+                      00492   ENDIF
+                      00493   IFDEF __18F66J11
+                      00494      INCLUDE <p18F66J11.INC>
+                      00495   ENDIF
+                      00496   IFDEF __18F66J15
+                      00497      INCLUDE <p18F66J15.INC>
+                      00498   ENDIF
+                      00499   IFDEF __18F66J16
+                      00500      INCLUDE <p18F66J16.INC>
+                      00501   ENDIF
+                      00502   IFDEF __18F66J50
+                      00503      INCLUDE <p18F66J50.INC>
+                      00504   ENDIF
+                      00505   IFDEF __18F66J55
+                      00506      INCLUDE <p18F66J55.INC>
+                      00507   ENDIF
+                      00508   IFDEF __18F66J60
+                      00509      INCLUDE <p18F66J60.INC>
+                      00510   ENDIF
+                      00511   IFDEF __18F66J65
+                      00512      INCLUDE <p18F66J65.INC>
+                      00513   ENDIF
+                      00514   IFDEF __18F66J90
+                      00515      INCLUDE <p18F66J90.INC>
+                      00516   ENDIF
+                      00517   IFDEF __18F66J93
+                      00518      INCLUDE <p18F66J93.INC>
+                      00519   ENDIF
+                      00520   IFDEF __18F66K22
+                      00521      INCLUDE <p18F66K22.INC>
+                      00522   ENDIF
+                      00523   IFDEF __18F66K80
+                      00524      INCLUDE <p18F66K80.INC>
+                      00525   ENDIF
+                      00526   IFDEF __18F66K90
+                      00527      INCLUDE <p18F66K90.INC>
+                      00528   ENDIF
+                      00529   IFDEF __18F6720
+                      00530      INCLUDE <p18F6720.INC>
+                      00531   ENDIF
+                      00532   IFDEF __18F6722
+                      00533      INCLUDE <p18F6722.INC>
+                      00534   ENDIF
+                      00535   IFDEF __18F6723
+                      00536      INCLUDE <p18F6723.INC>
+                      00537   ENDIF
+                      00538   IFDEF __18F67J10
+MPASM  5.35                          FREE.ASM   8-13-2010  14:45:03         PAGE  8
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+                      00539      INCLUDE <p18F67J10.INC>
+                      00540   ENDIF
+                      00541   IFDEF __18F67J11
+                      00542      INCLUDE <p18F67J11.INC>
+                      00543   ENDIF
+                      00544   IFDEF __18F67J50
+                      00545      INCLUDE <p18F67J50.INC>
+                      00546   ENDIF
+                      00547   IFDEF __18F67J60
+                      00548      INCLUDE <p18F67J60.INC>
+                      00549   ENDIF
+                      00550   IFDEF __18F67J90
+                      00551      INCLUDE <p18F67J90.INC>
+                      00552   ENDIF
+                      00553   IFDEF __18F67J93
+                      00554      INCLUDE <p18F67J93.INC>
+                      00555   ENDIF
+                      00556   IFDEF __18F67K22
+                      00557      INCLUDE <p18F67K22.INC>
+                      00558   ENDIF
+                      00559   IFDEF __18F67K90
+                      00560      INCLUDE <p18F67K90.INC>
+                      00561   ENDIF
+                      00562   IFDEF __18F8310
+                      00563      INCLUDE <p18F8310.INC>
+                      00564   ENDIF
+                      00565   IFDEF __18F8390
+                      00566      INCLUDE <p18F8390.INC>
+                      00567   ENDIF
+                      00568   IFDEF __18F8393
+                      00569      INCLUDE <p18F8393.INC>
+                      00570   ENDIF
+                      00571   IFDEF __18F83J11
+                      00572      INCLUDE <p18F83J11.INC>
+                      00573   ENDIF
+                      00574   IFDEF __18F83J90
+                      00575      INCLUDE <p18F83J90.INC>
+                      00576   ENDIF
+                      00577   IFDEF __18F8410
+                      00578      INCLUDE <p18F8410.INC>
+                      00579   ENDIF
+                      00580   IFDEF __18F8490
+                      00581      INCLUDE <p18F8490.INC>
+                      00582   ENDIF
+                      00583   IFDEF __18F8493
+                      00584      INCLUDE <p18F8493.INC>
+                      00585   ENDIF
+                      00586   IFDEF __18F84J11
+                      00587      INCLUDE <p18F84J11.INC>
+                      00588   ENDIF
+                      00589   IFDEF __18F84J90
+                      00590      INCLUDE <p18F84J90.INC>
+                      00591   ENDIF
+MPASM  5.35                          FREE.ASM   8-13-2010  14:45:03         PAGE  9
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+                      00592   IFDEF __18F8520
+                      00593      INCLUDE <p18F8520.INC>
+                      00594   ENDIF
+                      00595   IFDEF __18F8525
+                      00596      INCLUDE <p18F8525.INC>
+                      00597   ENDIF
+                      00598   IFDEF __18F8527
+                      00599      INCLUDE <p18F8527.INC>
+                      00600   ENDIF
+                      00601   IFDEF __18F8585
+                      00602      INCLUDE <p18F8585.INC>
+                      00603   ENDIF
+                      00604   IFDEF __18F85J10
+                      00605      INCLUDE <p18F85J10.INC>
+                      00606   ENDIF
+                      00607   IFDEF __18F85J11
+                      00608      INCLUDE <p18F85J11.INC>
+                      00609   ENDIF
+                      00610   IFDEF __18F85J15
+                      00611      INCLUDE <p18F85J15.INC>
+                      00612   ENDIF
+                      00613   IFDEF __18F85J50
+                      00614      INCLUDE <p18F85J50.INC>
+                      00615   ENDIF
+                      00616   IFDEF __18F85J90
+                      00617      INCLUDE <p18F85J90.INC>
+                      00618   ENDIF
+                      00619   IFDEF __18F85K22
+                      00620      INCLUDE <p18F85K22.INC>
+                      00621   ENDIF
+                      00622   IFDEF __18F85K90
+                      00623      INCLUDE <p18F85K90.INC>
+                      00624   ENDIF
+                      00625   IFDEF __18F8620
+                      00626      INCLUDE <p18F8620.INC>
+                      00627   ENDIF
+                      00628   IFDEF __18F8621
+                      00629      INCLUDE <p18F8621.INC>
+                      00630   ENDIF
+                      00631   IFDEF __18F8622
+                      00632      INCLUDE <p18F8622.INC>
+                      00633   ENDIF
+                      00634   IFDEF __18F8627
+                      00635      INCLUDE <p18F8627.INC>
+                      00636   ENDIF
+                      00637   IFDEF __18F8628
+                      00638      INCLUDE <p18F8628.INC>
+                      00639   ENDIF
+                      00640   IFDEF __18F8680
+                      00641      INCLUDE <p18F8680.INC>
+                      00642   ENDIF
+                      00643   IFDEF __18F86J10
+                      00644      INCLUDE <p18F86J10.INC>
+MPASM  5.35                          FREE.ASM   8-13-2010  14:45:03         PAGE 10
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+                      00645   ENDIF
+                      00646   IFDEF __18F86J11
+                      00647      INCLUDE <p18F86J11.INC>
+                      00648   ENDIF
+                      00649   IFDEF __18F86J15
+                      00650      INCLUDE <p18F86J15.INC>
+                      00651   ENDIF
+                      00652   IFDEF __18F86J16
+                      00653      INCLUDE <p18F86J16.INC>
+                      00654   ENDIF
+                      00655   IFDEF __18F86J50
+                      00656      INCLUDE <p18F86J50.INC>
+                      00657   ENDIF
+                      00658   IFDEF __18F86J55
+                      00659      INCLUDE <p18F86J55.INC>
+                      00660   ENDIF
+                      00661   IFDEF __18F86J60
+                      00662      INCLUDE <p18F86J60.INC>
+                      00663   ENDIF
+                      00664   IFDEF __18F86J65
+                      00665      INCLUDE <p18F86J65.INC>
+                      00666   ENDIF
+                      00667   IFDEF __18F86J72
+                      00668      INCLUDE <p18F86J72.INC>
+                      00669   ENDIF
+                      00670   IFDEF __18F86J90
+                      00671      INCLUDE <p18F86J90.INC>
+                      00672   ENDIF
+                      00673   IFDEF __18F86J93
+                      00674      INCLUDE <p18F86J93.INC>
+                      00675   ENDIF
+                      00676   IFDEF __18F86K22
+                      00677      INCLUDE <p18F86K22.INC>
+                      00678   ENDIF
+                      00679   IFDEF __18F86K90
+                      00680      INCLUDE <p18F86K90.INC>
+                      00681   ENDIF
+                      00682   IFDEF __18F8720
+                      00683      INCLUDE <p18F8720.INC>
+                      00684   ENDIF
+                      00685   IFDEF __18F8722
+                      00686      INCLUDE <p18F8722.INC>
+                      00687   ENDIF
+                      00688   IFDEF __18F8723
+                      00689      INCLUDE <p18F8723.INC>
+                      00690   ENDIF
+                      00691   IFDEF __18F87J10
+                      00692      INCLUDE <p18F87J10.INC>
+                      00693   ENDIF
+                      00694   IFDEF __18F87J11
+                      00695      INCLUDE <p18F87J11.INC>
+                      00696   ENDIF
+                      00697   IFDEF __18F87J50
+MPASM  5.35                          FREE.ASM   8-13-2010  14:45:03         PAGE 11
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+                      00698      INCLUDE <p18F87J50.INC>
+                      00699   ENDIF
+                      00700   IFDEF __18F87J60
+                      00701      INCLUDE <p18F87J60.INC>
+                      00702   ENDIF
+                      00703   IFDEF __18F87J72
+                      00704      INCLUDE <p18F87J72.INC>
+                      00705   ENDIF
+                      00706   IFDEF __18F87J90
+                      00707      INCLUDE <p18F87J90.INC>
+                      00708   ENDIF
+                      00709   IFDEF __18F87J93
+                      00710      INCLUDE <p18F87J93.INC>
+                      00711   ENDIF
+                      00712   IFDEF __18F87K22
+                      00713      INCLUDE <p18F87K22.INC>
+                      00714   ENDIF
+                      00715   IFDEF __18F87K90
+                      00716      INCLUDE <p18F87K90.INC>
+                      00717   ENDIF
+                      00718   IFDEF __18F96J60
+                      00719      INCLUDE <p18F96J60.INC>
+                      00720   ENDIF
+                      00721   IFDEF __18F96J65
+                      00722      INCLUDE <p18F96J65.INC>
+                      00723   ENDIF
+                      00724   IFDEF __18F97J60
+                      00725      INCLUDE <p18F97J60.INC>
+                      00726   ENDIF
+                      00727   IFDEF __18LF13K22
+                      00728      INCLUDE <p18LF13K22.INC>
+                      00729   ENDIF
+                      00730   IFDEF __18LF13K50
+                      00731      INCLUDE <p18LF13K50.INC>
+                      00732   ENDIF
+                      00733   IFDEF __18LF14K22
+                      00734      INCLUDE <p18LF14K22.INC>
+                      00735   ENDIF
+                      00736   IFDEF __18LF14K50
+                      00737      INCLUDE <p18LF14K50.INC>
+                      00738   ENDIF
+                      00739   IFDEF __18LF23K22
+                      00740      INCLUDE <p18LF23K22.INC>
+                      00741   ENDIF
+                      00742   IFDEF __18LF24J11
+                      00743      INCLUDE <p18LF24J11.INC>
+                      00744   ENDIF
+                      00745   IFDEF __18LF24J50
+                      00746      INCLUDE <p18LF24J50.INC>
+                      00747   ENDIF
+                      00748   IFDEF __18LF24K22
+                      00749      INCLUDE <p18LF24K22.INC>
+                      00750   ENDIF
+MPASM  5.35                          FREE.ASM   8-13-2010  14:45:03         PAGE 12
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+                      00751   IFDEF __18LF25J11
+                      00752      INCLUDE <p18LF25J11.INC>
+                      00753   ENDIF
+                      00754   IFDEF __18LF25J50
+                      00755      INCLUDE <p18LF25J50.INC>
+                      00756   ENDIF
+                      00757   IFDEF __18LF25K22
+                      00758      INCLUDE <p18LF25K22.INC>
+                      00759   ENDIF
+                      00760   IFDEF __18LF26J11
+                      00761      INCLUDE <p18LF26J11.INC>
+                      00762   ENDIF
+                      00763   IFDEF __18LF26J13
+                      00764      INCLUDE <p18LF26J13.INC>
+                      00765   ENDIF
+                      00766   IFDEF __18LF26J50
+                      00767      INCLUDE <p18LF26J50.INC>
+                      00768   ENDIF
+                      00769   IFDEF __18LF26J53
+                      00770      INCLUDE <p18LF26J53.INC>
+                      00771   ENDIF
+                      00772   IFDEF __18LF26K22
+                      00773      INCLUDE <p18LF26K22.INC>
+                      00774   ENDIF
+                      00775   IFDEF __18LF27J13
+                      00776      INCLUDE <p18LF27J13.INC>
+                      00777   ENDIF
+                      00778   IFDEF __18LF27J53
+                      00779      INCLUDE <p18LF27J53.INC>
+                      00780   ENDIF
+                      00781   IFDEF __18LF43K22
+                      00782      INCLUDE <p18LF43K22.INC>
+                      00783   ENDIF
+                      00784   IFDEF __18LF44J11
+                      00785      INCLUDE <p18LF44J11.INC>
+                      00786   ENDIF
+                      00787   IFDEF __18LF44J50
+                      00788      INCLUDE <p18LF44J50.INC>
+                      00789   ENDIF
+                      00790   IFDEF __18LF44K22
+                      00791      INCLUDE <p18LF44K22.INC>
+                      00792   ENDIF
+                      00793   IFDEF __18LF45J11
+                      00794      INCLUDE <p18LF45J11.INC>
+                      00795   ENDIF
+                      00796   IFDEF __18LF45J50
+                      00797      INCLUDE <p18LF45J50.INC>
+                      00798   ENDIF
+                      00799   IFDEF __18LF45K22
+                      00800      INCLUDE <p18LF45K22.INC>
+                      00801   ENDIF
+                      00802   IFDEF __18LF46J11
+                      00803      INCLUDE <p18LF46J11.INC>
+MPASM  5.35                          FREE.ASM   8-13-2010  14:45:03         PAGE 13
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+                      00804   ENDIF
+                      00805   IFDEF __18LF46J13
+                      00806      INCLUDE <p18LF46J13.INC>
+                      00807   ENDIF
+                      00808   IFDEF __18LF46J50
+                      00809      INCLUDE <p18LF46J50.INC>
+                      00810   ENDIF
+                      00811   IFDEF __18LF46J53
+                      00812      INCLUDE <p18LF46J53.INC>
+                      00813   ENDIF
+                      00814   IFDEF __18LF46K22
+                      00815      INCLUDE <p18LF46K22.INC>
+                      00816   ENDIF
+                      00817   IFDEF __18LF47J13
+                      00818      INCLUDE <p18LF47J13.INC>
+                      00819   ENDIF
+                      00820   IFDEF __18LF47J53
+                      00821      INCLUDE <p18LF47J53.INC>
+                      00822   ENDIF
+                      00823   IFDEF __MCV20USB
+                      00824      INCLUDE <pmcv20usb.inc>
+                      00825   ENDIF
+                      00826 
+                      00029 ;===============================================================================
+                      00030                 radix   decimal
+                      00031 ;===============================================================================
+                      00032 #include <heap_config.h>
+                      00001 #if     0
+                      00002 //==============================================================================
+                      00003 // This file is part of "Heap Management For Small Microcontrollers".
+                      00004 // v1.04 (2009-05-23)
+                      00005 // isaacbavaresco@yahoo.com.br
+                      00006 //==============================================================================
+                      00007 /*
+                      00008  Copyright (c) 2007-2009, Isaac Marino Bavaresco
+                      00009  All rights reserved.
+                      00010 
+                      00011  Redistribution and use in source and binary forms, with or without
+                      00012  modification, are permitted provided that the following conditions are met:
+                      00013      * Redistributions of source code must retain the above copyright
+                      00014        notice, this list of conditions and the following disclaimer.
+                      00015      * Neither the name of the author nor the
+                      00016        names of its contributors may be used to endorse or promote products
+                      00017        derived from this software without specific prior written permission.
+                      00018 
+                      00019  THIS SOFTWARE IS PROVIDED BY THE AUTHOR ''AS IS'' AND ANY
+                      00020  EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+                      00021  WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+                      00022  DISCLAIMED. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY
+                      00023  DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+                      00024  (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+                      00025  LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+                      00026  ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+MPASM  5.35                          FREE.ASM   8-13-2010  14:45:03         PAGE 14
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+                      00027  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+                      00028  SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+                      00029 */
+                      00030 //==============================================================================
+                      00031 //
+                      00032 // This file is included from both ".c" files and ".asm" files.
+                      00033 //
+                      00034 //==============================================================================
+                      00035 #endif
+                      00036 
+                      00037 #define USING_FREE_RTOS                 1
+                      00038 #define ALLOCATE_FROM_BEGINNING 0
+                      00039 
+                      00040 #define HEAP_SIZE                               1024
+                      00041 
+                      00042 #if 0
+                      00043 // Be careful, this definition should agree with the linker-script
+                      00044 // or it must be zero.
+                      00045 // If STACK_SIZE is defined to zero, __reclaim_stack() is not defined.
+                      00046 #endif
+                      00047 #define STACK_SIZE                              0x100
+                      00048 
+                      00033 ;===============================================================================
+                      00034 #if       USING_FREE_RTOS == 1
+                      00035 ;-------------------------------------------------------------------------------
+  0000                00036                 extern  vTaskSuspendAll
+  0000                00037                 extern  xTaskResumeAll
+                      00038 #define LOCALS_SIZE     6
+                      00039 DISABLE_INTERRUPTS macro
+                      00040                 call    vTaskSuspendAll
+                      00041                 endm
+                      00042 
+                      00043 RESTORE_INTERRUPTS macro
+                      00044                 call    xTaskResumeAll
+                      00045                 endm
+                      00046 ;-------------------------------------------------------------------------------
+                      00047 #else   ; USING_FREE_RTOS == 1
+                      00048 ;-------------------------------------------------------------------------------
+                      00049 #define LOCALS_SIZE     7
+                      00050 DISABLE_INTERRUPTS macro
+                      00051 ;                       Aux      = INTCON & 0xc0;
+                      00052                 movlw   0xc0
+                      00053                 andwf   INTCON,w,ACCESS
+                      00054                 movwf   [Aux+0]
+                      00055 ;                       INTCON  &= 0x3f;
+                      00056                 movlw   0x3f
+                      00057                 andwf   INTCON,f,ACCESS
+                      00058                 endm
+                      00059 
+                      00060 RESTORE_INTERRUPTS macro
+                      00061 ;                       INTCON  |= Aux;
+                      00062                 movf    [Aux+0],w
+                      00063                 iorwf   INTCON,f,ACCESS
+MPASM  5.35                          FREE.ASM   8-13-2010  14:45:03         PAGE 15
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+                      00064                 endm
+                      00065 ;-------------------------------------------------------------------------------
+                      00066 #endif  ; USING_FREE_RTOS == 1
+                      00067 ;===============================================================================
+                      00068 ALLOC           code
+                      00069 ;===============================================================================
+                      00070 #define r       0
+                      00071 #define p       4
+                      00072 #define q       6
+                      00073 #define Aux2    8
+                      00074 #define Aux     10
+                      00075 
+  0000                00076                 extern  __freelist
+                      00077 ;===============================================================================
+  0000                00078                 global  free
+                      00079 ;15:            void free( void ram *r )
+                      00080 
+000000 CFD9 FFE6      00081 free:           movff   FSR2L, POSTINC1
+000004 CFDA FFE6      00082                 movff   FSR2H, POSTINC1
+000008 CFE1 FFD9      00083                 movff   FSR1L,FSR2L
+00000C CFE2 FFDA      00084                 movff   FSR1H,FSR2H
+                      00085 
+000010 E984           00086                 subfsr  2,4
+                      00087 
+                      00088 ;16:                    {
+                      00089 ;17:                    struct _AllocBlock ram  *p, *q;
+                      00090 ;                       unsigned short          Aux2;
+                      00091 ;                       unsigned char           Aux;
+                      00092 
+000012 E846           00093                 addfsr  1,LOCALS_SIZE
+                      00094 ;18:
+                      00095 ;19:                    if( r == NULL )
+                      00096 
+000014 5000           00097                 movf    [r+0],w
+000016 1001           00098                 iorwf   [r+1],w
+                      00099 ;20:                            return;
+000018 E1??           00100                 bnz     NotNULL
+00001A D???           00101                 bra     Finish
+                      00102 ;21:            
+                      00103 ;22:                    r = (unsigned char *)r - 2;
+00001C 0E02           00104 NotNULL:        movlw   0x02
+00001E 5E00           00105                 subwf   [r+0],f
+000020 0E00           00106                 movlw   0
+000022 5A01           00107                 subwfb  [r+1],f
+                      00108 
+                      00109                 DISABLE_INTERRUPTS
+000024 EC?? F???          M                 call    vTaskSuspendAll
+                      00110 ;23:            
+                      00111 ;24:                    
+                      00112 ;25:                    for( p = __freelist.Next, q = &__freelist; p != NULL && p < (struct _AllocBlock 
+                            ram *)r; q = p, p = p->Next )
+                      00113 
+000028 0E??           00114                 movlw   low __freelist
+MPASM  5.35                          FREE.ASM   8-13-2010  14:45:03         PAGE 16
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+00002A 6E06           00115                 movwf   [q+0]
+00002C 0E??           00116                 movlw   high __freelist
+00002E 6E07           00117                 movwf   [q+1]
+                      00118 
+000030 C??? FFE9      00119                 movff   __freelist+2,FSR0L      ; p = __freelist.Next;
+000034 C??? FFEA      00120                 movff   __freelist+3,FSR0H
+                      00121 
+000038 50E9           00122 Loop:           movf    FSR0L,w,ACCESS          ; p != NULL
+00003A 10EA           00123                 iorwf   FSR0H,w,ACCESS
+00003C E0??           00124                 bz      xa630
+                      00125 
+00003E 5000           00126                 movf    [r+0],w                 ; && p < (struct _AllocBlock ram *)r;
+000040 5CE9           00127                 subwf   FSR0L,w,ACCESS
+000042 5001           00128                 movf    [r+1],w
+000044 58EA           00129                 subwfb  FSR0H,w,ACCESS
+000046 E2??           00130                 bc      xa630
+                      00131 
+000048 50E9           00132                 movf    FSR0L,w,ACCESS          ; q = p;
+00004A 6E06           00133                 movwf   [q+0]
+00004C 50EA           00134                 movf    FSR0H,w,ACCESS
+00004E 6E07           00135                 movwf   [q+1]
+                      00136 
+000050 E802           00137                 addfsr  0,2                     ; p = p->Next );
+000052 50EE           00138                 movf    POSTINC0,w,ACCESS
+000054 CFEF FFEA      00139                 movff   INDF0,FSR0H
+000058 6EE9           00140                 movwf   FSR0L,ACCESS
+                      00141 
+00005A D???           00142                 bra     Loop
+                      00143 ;26:                            ;       /* Empty statement */
+                      00144 
+00005C 50E9           00145 xa630:          movf    FSR0L,w
+00005E 6E04           00146                 movwf   [p+0]
+000060 50EA           00147                 movf    FSR0H,w
+000062 6E05           00148                 movwf   [p+1]
+                      00149 
+                      00150 ;29:                    q->Next                                 = r;
+000064 EB06 FFE9      00151                 movsf   [q+0],FSR0L
+000068 EB07 FFEA      00152                 movsf   [q+1],FSR0H
+00006C E802           00153                 addfsr  0,2
+00006E EB00 FFEE      00154                 movsf   [r+0],POSTINC0
+000072 EB01 FFED      00155                 movsf   [r+1],POSTDEC0
+                      00156 
+                      00157 ;28:                    ((struct _AllocBlock ram *)r)->Next     = p;
+000076 EB00 FFE9      00158                 movsf   [r+0],FSR0L
+00007A EB01 FFEA      00159                 movsf   [r+1],FSR0H
+00007E E802           00160                 addfsr  0,2
+000080 EB04 FFEE      00161                 movsf   [p+0],POSTINC0
+000084 EB05 FFED      00162                 movsf   [p+1],POSTDEC0
+                      00163 
+                      00164 ;31:                    if( (unsigned short)r + ((struct _AllocBlock ram *)r)->Length + 2 == (unsigned s
+                            hort)p )
+                      00165 
+                      00166                 ;movsf  [r+0],FSR0L
+MPASM  5.35                          FREE.ASM   8-13-2010  14:45:03         PAGE 17
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+                      00167                 ;movsf  [r+1],FSR0H
+000088 E902           00168                 subfsr  0,2
+                      00169 
+00008A 50EE           00170                 movf    POSTINC0,w,ACCESS
+00008C 2400           00171                 addwf   [r+0],w
+00008E 6EF3           00172                 movwf   PRODL,ACCESS
+000090 50ED           00173                 movf    POSTDEC0,w,ACCESS
+000092 2001           00174                 addwfc  [r+1],w
+000094 6EF4           00175                 movwf   PRODH,ACCESS
+                      00176 
+000096 0E02           00177                 movlw   0x02
+000098 24F3           00178                 addwf   PRODL,w,ACCESS
+00009A 1804           00179                 xorwf   [p+0],w
+00009C E1??           00180                 bnz     xa68e
+                      00181 
+00009E 0E00           00182                 movlw   0x00
+0000A0 20F4           00183                 addwfc  PRODH,w,ACCESS
+0000A2 1805           00184                 xorwf   [p+1],w
+0000A4 E1??           00185                 bnz     xa68e
+                      00186 
+                      00187 ;32:                            {
+                      00188 ;34:                            ((struct _AllocBlock ram *)r)->Length   += p->Length + 2;
+                      00189 ;33:                            ((struct _AllocBlock ram *)r)->Next      = p->Next;
+                      00190 
+0000A6 EB04 FFE9      00191                 movsf   [p+0],FSR0L             ; FSR0 = p;
+0000AA EB05 FFEA      00192                 movsf   [p+1],FSR0H
+                      00193 
+0000AE 0E02           00194                 movlw   0x02                    ; Aux2 = p->Length + 2;
+0000B0 24EE           00195                 addwf   POSTINC0,w,ACCESS
+0000B2 6E08           00196                 movwf   [Aux2+0]
+0000B4 0E00           00197                 movlw   0x00
+0000B6 20EE           00198                 addwfc  POSTINC0,w,ACCESS
+0000B8 6E09           00199                 movwf   [Aux2+1]
+                      00200 
+0000BA CFEE FFF3      00201                 movff   POSTINC0,PRODL          ; PROD = p->Next;
+0000BE CFEE FFF4      00202                 movff   POSTINC0,PRODH
+                      00203 
+0000C2 EB00 FFE9      00204                 movsf   [r+0],FSR0L             ; FSR = r;
+0000C6 EB01 FFEA      00205                 movsf   [r+1],FSR0H
+                      00206 
+0000CA 5008           00207                 movf    [Aux2+0],w              ; r->Length += Aux2;
+0000CC 26EE           00208                 addwf   POSTINC0,f,ACCESS
+0000CE 5009           00209                 movf    [Aux2+1],w
+0000D0 22EE           00210                 addwfc  POSTINC0,f,ACCESS
+                      00211 
+0000D2 CFF3 FFEE      00212                 movff   PRODL,POSTINC0          ; r->Next = PROD;
+0000D6 CFF4 FFEE      00213                 movff   PRODH,POSTINC0
+                      00214 ;35:                            }
+                      00215 ;36:            
+                      00216 ;37:                    if( (unsigned short)q + ((struct _AllocBlock ram *)q)->Length + 2 == (unsigned s
+                            hort)r )
+                      00217 
+0000DA EB06 FFE9      00218 xa68e:          movsf   [q+0],FSR0L             ; FSR0 = q;
+MPASM  5.35                          FREE.ASM   8-13-2010  14:45:03         PAGE 18
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+0000DE EB07 FFEA      00219                 movsf   [q+1],FSR0H
+                      00220 
+0000E2 50EE           00221                 movf    POSTINC0,w,ACCESS       ; PROD = q->Length;
+0000E4 2406           00222                 addwf   [q+0],w
+0000E6 6EF3           00223                 movwf   PRODL,ACCESS
+0000E8 50ED           00224                 movf    POSTDEC0,w,ACCESS
+0000EA 2007           00225                 addwfc  [q+1],w
+0000EC 6EF4           00226                 movwf   PRODH,ACCESS
+                      00227 
+0000EE 0E02           00228                 movlw   0x02                    ; if( PROD + 2 == r )
+0000F0 24F3           00229                 addwf   PRODL,w,ACCESS          ;    {
+0000F2 1800           00230                 xorwf   [r+0],w
+0000F4 E1??           00231                 bnz     Epilog
+                      00232 
+0000F6 0E00           00233                 movlw   0x00
+0000F8 20F4           00234                 addwfc  PRODH,w,ACCESS
+0000FA 1801           00235                 xorwf   [r+1],w
+0000FC E1??           00236                 bnz     Epilog
+                      00237 
+                      00238 ;38:                            {
+                      00239 
+                      00240 ;40:                            ((struct _AllocBlock ram *)q)->Length   += ((struct _AllocBlock ram *)r)
+                            ->Length + 2;
+                      00241 ;39:                            ((struct _AllocBlock ram *)q)->Next      = ((struct _AllocBlock ram *)r)
+                            ->Next;
+                      00242 
+0000FE EB00 FFE9      00243                 movsf   [r+0],FSR0L             ; FSR0 = r;
+000102 EB01 FFEA      00244                 movsf   [r+1],FSR0H
+                      00245 
+000106 0E02           00246                 movlw   0x02                    ; Aux2 = r->Length + 2;
+000108 24EE           00247                 addwf   POSTINC0,w,ACCESS
+00010A 6E08           00248                 movwf   [Aux2+0]
+00010C 0E00           00249                 movlw   0x00
+00010E 20EE           00250                 addwfc  POSTINC0,w,ACCESS
+000110 6E09           00251                 movwf   [Aux2+1]
+                      00252 
+000112 CFEE FFF3      00253                 movff   POSTINC0,PRODL          ; PROD = r->Next;
+000116 CFEE FFF4      00254                 movff   POSTINC0,PRODH
+                      00255 
+00011A EB06 FFE9      00256                 movsf   [q+0],FSR0L             ; FSR0 = q;
+00011E EB07 FFEA      00257                 movsf   [q+1],FSR0H
+                      00258 
+000122 5008           00259                 movf    [Aux2+0],w              ; q->Length += Aux2;
+000124 26EE           00260                 addwf   POSTINC0,f,ACCESS
+000126 5009           00261                 movf    [Aux2+1],w
+000128 22EE           00262                 addwfc  POSTINC0,f,ACCESS
+                      00263 
+00012A CFF3 FFEE      00264                 movff   PRODL,POSTINC0          ; q->Next = PROD;
+00012E CFF4 FFEE      00265                 movff   PRODH,POSTINC0
+                      00266 ;41:                            }
+                      00267 ;42:                    }
+                      00268 
+                      00269 
+MPASM  5.35                          FREE.ASM   8-13-2010  14:45:03         PAGE 19
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+                      00270 Epilog:         RESTORE_INTERRUPTS
+000132 EC?? F???          M                 call    xTaskResumeAll
+000136 E947           00271 Finish:         subfsr  1,LOCALS_SIZE + 1
+                      00272 
+000138 CFE5 FFDA      00273                 movff   POSTDEC1,FSR2H
+00013C CFE7 FFD9      00274                 movff   INDF1,FSR2L
+000140 0012           00275                 return  0
+                      00276 ;===============================================================================
+                      00277                 end
+MPASM  5.35                          FREE.ASM   8-13-2010  14:45:03         PAGE 20
+
+
+SYMBOL TABLE
+  LABEL                             VALUE 
+
+A                                 00000000
+ABAT                              00000004
+ABDEN                             00000000
+ABDOVF                            00000007
+ACCESS                            00000000
+ACKDT                             00000005
+ACKEN                             00000004
+ACKSTAT                           00000006
+ACQT0                             00000003
+ACQT1                             00000004
+ACQT2                             00000005
+ADCON0                            00000FC2
+ADCON1                            00000FC1
+ADCON2                            00000FC0
+ADCS0                             00000000
+ADCS1                             00000001
+ADCS2                             00000002
+ADDEN                             00000003
+ADEN                              00000003
+ADFM                              00000007
+ADIE                              00000006
+ADIF                              00000006
+ADIP                              00000006
+ADON                              00000000
+ADRES                             00000FC3
+ADRESH                            00000FC4
+ADRESL                            00000FC3
+ALLOCATE_FROM_BEGINNING           0
+AN0                               00000000
+AN1                               00000001
+AN10                              00000000
+AN2                               00000002
+AN3                               00000003
+AN4                               00000005
+AN8                               00000001
+AN9                               00000004
+Aux                               10
+Aux2                              8
+B0CON                             00000E20
+B0D0                              00000E26
+B0D00                             00000000
+B0D01                             00000001
+B0D02                             00000002
+B0D03                             00000003
+B0D04                             00000004
+B0D05                             00000005
+B0D06                             00000006
+B0D07                             00000007
+B0D1                              00000E27
+B0D10                             00000000
+B0D11                             00000001
+B0D12                             00000002
+B0D13                             00000003
+MPASM  5.35                          FREE.ASM   8-13-2010  14:45:03         PAGE 21
+
+
+SYMBOL TABLE
+  LABEL                             VALUE 
+
+B0D14                             00000004
+B0D15                             00000005
+B0D16                             00000006
+B0D17                             00000007
+B0D2                              00000E28
+B0D20                             00000000
+B0D21                             00000001
+B0D22                             00000002
+B0D23                             00000003
+B0D24                             00000004
+B0D25                             00000005
+B0D26                             00000006
+B0D27                             00000007
+B0D3                              00000E29
+B0D30                             00000000
+B0D31                             00000001
+B0D32                             00000002
+B0D33                             00000003
+B0D34                             00000004
+B0D35                             00000005
+B0D36                             00000006
+B0D37                             00000007
+B0D4                              00000E2A
+B0D40                             00000000
+B0D41                             00000001
+B0D42                             00000002
+B0D43                             00000003
+B0D44                             00000004
+B0D45                             00000005
+B0D46                             00000006
+B0D47                             00000007
+B0D5                              00000E2B
+B0D50                             00000000
+B0D51                             00000001
+B0D52                             00000002
+B0D53                             00000003
+B0D54                             00000004
+B0D55                             00000005
+B0D56                             00000006
+B0D57                             00000007
+B0D6                              00000E2C
+B0D60                             00000000
+B0D61                             00000001
+B0D62                             00000002
+B0D63                             00000003
+B0D64                             00000004
+B0D65                             00000005
+B0D66                             00000006
+B0D67                             00000007
+B0D7                              00000E2D
+B0D70                             00000000
+B0D71                             00000001
+B0D72                             00000002
+MPASM  5.35                          FREE.ASM   8-13-2010  14:45:03         PAGE 22
+
+
+SYMBOL TABLE
+  LABEL                             VALUE 
+
+B0D73                             00000003
+B0D74                             00000004
+B0D75                             00000005
+B0D76                             00000006
+B0D77                             00000007
+B0DLC                             00000E25
+B0EIDH                            00000E23
+B0EIDL                            00000E24
+B0IE                              00000002
+B0SIDH                            00000E21
+B0SIDL                            00000E22
+B0TXEN                            00000002
+B1CON                             00000E30
+B1D0                              00000E36
+B1D00                             00000000
+B1D01                             00000001
+B1D02                             00000002
+B1D03                             00000003
+B1D04                             00000004
+B1D05                             00000005
+B1D06                             00000006
+B1D07                             00000007
+B1D1                              00000E37
+B1D10                             00000000
+B1D11                             00000001
+B1D12                             00000002
+B1D13                             00000003
+B1D14                             00000004
+B1D15                             00000005
+B1D16                             00000006
+B1D17                             00000007
+B1D2                              00000E38
+B1D20                             00000000
+B1D21                             00000001
+B1D22                             00000002
+B1D23                             00000003
+B1D24                             00000004
+B1D25                             00000005
+B1D26                             00000006
+B1D27                             00000007
+B1D3                              00000E39
+B1D30                             00000000
+B1D31                             00000001
+B1D32                             00000002
+B1D33                             00000003
+B1D34                             00000004
+B1D35                             00000005
+B1D36                             00000006
+B1D37                             00000007
+B1D4                              00000E3A
+B1D40                             00000000
+B1D41                             00000001
+B1D42                             00000002
+MPASM  5.35                          FREE.ASM   8-13-2010  14:45:03         PAGE 23
+
+
+SYMBOL TABLE
+  LABEL                             VALUE 
+
+B1D43                             00000003
+B1D44                             00000004
+B1D45                             00000005
+B1D46                             00000006
+B1D47                             00000007
+B1D5                              00000E3B
+B1D50                             00000000
+B1D51                             00000001
+B1D52                             00000002
+B1D53                             00000003
+B1D54                             00000004
+B1D55                             00000005
+B1D56                             00000006
+B1D57                             00000007
+B1D6                              00000E3C
+B1D60                             00000000
+B1D61                             00000001
+B1D62                             00000002
+B1D63                             00000003
+B1D64                             00000004
+B1D65                             00000005
+B1D66                             00000006
+B1D67                             00000007
+B1D7                              00000E3D
+B1D70                             00000000
+B1D71                             00000001
+B1D72                             00000002
+B1D73                             00000003
+B1D74                             00000004
+B1D75                             00000005
+B1D76                             00000006
+B1D77                             00000007
+B1DLC                             00000E35
+B1EIDH                            00000E33
+B1EIDL                            00000E34
+B1IE                              00000003
+B1SIDH                            00000E31
+B1SIDL                            00000E32
+B1TXEN                            00000003
+B2CON                             00000E40
+B2D0                              00000E46
+B2D00                             00000000
+B2D01                             00000001
+B2D02                             00000002
+B2D03                             00000003
+B2D04                             00000004
+B2D05                             00000005
+B2D06                             00000006
+B2D07                             00000007
+B2D1                              00000E47
+B2D10                             00000000
+B2D11                             00000001
+B2D12                             00000002
+MPASM  5.35                          FREE.ASM   8-13-2010  14:45:03         PAGE 24
+
+
+SYMBOL TABLE
+  LABEL                             VALUE 
+
+B2D13                             00000003
+B2D14                             00000004
+B2D15                             00000005
+B2D16                             00000006
+B2D17                             00000007
+B2D2                              00000E48
+B2D20                             00000000
+B2D21                             00000001
+B2D22                             00000002
+B2D23                             00000003
+B2D24                             00000004
+B2D25                             00000005
+B2D26                             00000006
+B2D27                             00000007
+B2D3                              00000E49
+B2D30                             00000000
+B2D31                             00000001
+B2D32                             00000002
+B2D33                             00000003
+B2D34                             00000004
+B2D35                             00000005
+B2D36                             00000006
+B2D37                             00000007
+B2D4                              00000E4A
+B2D40                             00000000
+B2D41                             00000001
+B2D42                             00000002
+B2D43                             00000003
+B2D44                             00000004
+B2D45                             00000005
+B2D46                             00000006
+B2D47                             00000007
+B2D5                              00000E4B
+B2D50                             00000000
+B2D51                             00000001
+B2D52                             00000002
+B2D53                             00000003
+B2D54                             00000004
+B2D55                             00000005
+B2D56                             00000006
+B2D57                             00000007
+B2D6                              00000E4C
+B2D60                             00000000
+B2D61                             00000001
+B2D62                             00000002
+B2D63                             00000003
+B2D64                             00000004
+B2D65                             00000005
+B2D66                             00000006
+B2D67                             00000007
+B2D7                              00000E4D
+B2D70                             00000000
+B2D71                             00000001
+MPASM  5.35                          FREE.ASM   8-13-2010  14:45:03         PAGE 25
+
+
+SYMBOL TABLE
+  LABEL                             VALUE 
+
+B2D72                             00000002
+B2D73                             00000003
+B2D74                             00000004
+B2D75                             00000005
+B2D76                             00000006
+B2D77                             00000007
+B2DLC                             00000E45
+B2EIDH                            00000E43
+B2EIDL                            00000E44
+B2IE                              00000004
+B2SIDH                            00000E41
+B2SIDL                            00000E42
+B2TXEN                            00000004
+B3CON                             00000E50
+B3D0                              00000E56
+B3D00                             00000000
+B3D01                             00000001
+B3D02                             00000002
+B3D03                             00000003
+B3D04                             00000004
+B3D05                             00000005
+B3D06                             00000006
+B3D07                             00000007
+B3D1                              00000E57
+B3D10                             00000000
+B3D11                             00000001
+B3D12                             00000002
+B3D13                             00000003
+B3D14                             00000004
+B3D15                             00000005
+B3D16                             00000006
+B3D17                             00000007
+B3D2                              00000E58
+B3D20                             00000000
+B3D21                             00000001
+B3D22                             00000002
+B3D23                             00000003
+B3D24                             00000004
+B3D25                             00000005
+B3D26                             00000006
+B3D27                             00000007
+B3D3                              00000E59
+B3D30                             00000000
+B3D31                             00000001
+B3D32                             00000002
+B3D33                             00000003
+B3D34                             00000004
+B3D35                             00000005
+B3D36                             00000006
+B3D37                             00000007
+B3D4                              00000E5A
+B3D40                             00000000
+B3D41                             00000001
+MPASM  5.35                          FREE.ASM   8-13-2010  14:45:03         PAGE 26
+
+
+SYMBOL TABLE
+  LABEL                             VALUE 
+
+B3D42                             00000002
+B3D43                             00000003
+B3D44                             00000004
+B3D45                             00000005
+B3D46                             00000006
+B3D47                             00000007
+B3D5                              00000E5B
+B3D50                             00000000
+B3D51                             00000001
+B3D52                             00000002
+B3D53                             00000003
+B3D54                             00000004
+B3D55                             00000005
+B3D56                             00000006
+B3D57                             00000007
+B3D6                              00000E5C
+B3D60                             00000000
+B3D61                             00000001
+B3D62                             00000002
+B3D63                             00000003
+B3D64                             00000004
+B3D65                             00000005
+B3D66                             00000006
+B3D67                             00000007
+B3D7                              00000E5D
+B3D70                             00000000
+B3D71                             00000001
+B3D72                             00000002
+B3D73                             00000003
+B3D74                             00000004
+B3D75                             00000005
+B3D76                             00000006
+B3D77                             00000007
+B3DLC                             00000E55
+B3EIDH                            00000E53
+B3EIDL                            00000E54
+B3IE                              00000005
+B3SIDH                            00000E51
+B3SIDL                            00000E52
+B3TXEN                            00000005
+B46D77                            00000007
+B4CON                             00000E60
+B4D0                              00000E66
+B4D00                             00000000
+B4D01                             00000001
+B4D02                             00000002
+B4D03                             00000003
+B4D04                             00000004
+B4D05                             00000005
+B4D06                             00000006
+B4D07                             00000007
+B4D1                              00000E67
+B4D10                             00000000
+MPASM  5.35                          FREE.ASM   8-13-2010  14:45:03         PAGE 27
+
+
+SYMBOL TABLE
+  LABEL                             VALUE 
+
+B4D11                             00000001
+B4D12                             00000002
+B4D13                             00000003
+B4D14                             00000004
+B4D15                             00000005
+B4D16                             00000006
+B4D17                             00000007
+B4D2                              00000E68
+B4D20                             00000000
+B4D21                             00000001
+B4D22                             00000002
+B4D23                             00000003
+B4D24                             00000004
+B4D25                             00000005
+B4D26                             00000006
+B4D27                             00000007
+B4D3                              00000E69
+B4D30                             00000000
+B4D31                             00000001
+B4D32                             00000002
+B4D33                             00000003
+B4D34                             00000004
+B4D35                             00000005
+B4D36                             00000006
+B4D37                             00000007
+B4D4                              00000E6A
+B4D40                             00000000
+B4D41                             00000001
+B4D42                             00000002
+B4D43                             00000003
+B4D44                             00000004
+B4D45                             00000005
+B4D46                             00000006
+B4D47                             00000007
+B4D5                              00000E6B
+B4D50                             00000000
+B4D51                             00000001
+B4D52                             00000002
+B4D53                             00000003
+B4D54                             00000004
+B4D55                             00000005
+B4D56                             00000006
+B4D57                             00000007
+B4D6                              00000E6C
+B4D60                             00000000
+B4D61                             00000001
+B4D62                             00000002
+B4D63                             00000003
+B4D64                             00000004
+B4D65                             00000005
+B4D66                             00000006
+B4D67                             00000007
+B4D7                              00000E6D
+MPASM  5.35                          FREE.ASM   8-13-2010  14:45:03         PAGE 28
+
+
+SYMBOL TABLE
+  LABEL                             VALUE 
+
+B4D70                             00000000
+B4D71                             00000001
+B4D72                             00000002
+B4D73                             00000003
+B4D74                             00000004
+B4D75                             00000005
+B4D76                             00000006
+B4D77                             00000007
+B4DLC                             00000E65
+B4EIDH                            00000E63
+B4EIDL                            00000E64
+B4IE                              00000006
+B4SIDH                            00000E61
+B4SIDL                            00000E62
+B4TXEN                            00000006
+B57D07                            00000007
+B57D23                            00000003
+B5CON                             00000E70
+B5D0                              00000E76
+B5D00                             00000000
+B5D01                             00000001
+B5D02                             00000002
+B5D03                             00000003
+B5D04                             00000004
+B5D05                             00000005
+B5D06                             00000006
+B5D07                             00000007
+B5D1                              00000E77
+B5D10                             00000000
+B5D11                             00000001
+B5D12                             00000002
+B5D13                             00000003
+B5D14                             00000004
+B5D15                             00000005
+B5D16                             00000006
+B5D17                             00000007
+B5D2                              00000E78
+B5D20                             00000000
+B5D21                             00000001
+B5D22                             00000002
+B5D23                             00000003
+B5D24                             00000004
+B5D25                             00000005
+B5D26                             00000006
+B5D27                             00000007
+B5D3                              00000E79
+B5D30                             00000000
+B5D31                             00000001
+B5D32                             00000002
+B5D33                             00000003
+B5D34                             00000004
+B5D35                             00000005
+B5D36                             00000006
+MPASM  5.35                          FREE.ASM   8-13-2010  14:45:03         PAGE 29
+
+
+SYMBOL TABLE
+  LABEL                             VALUE 
+
+B5D37                             00000007
+B5D4                              00000E7A
+B5D40                             00000000
+B5D41                             00000001
+B5D42                             00000002
+B5D43                             00000003
+B5D44                             00000004
+B5D45                             00000005
+B5D46                             00000006
+B5D47                             00000007
+B5D5                              00000E7B
+B5D50                             00000000
+B5D51                             00000001
+B5D52                             00000002
+B5D53                             00000003
+B5D54                             00000004
+B5D55                             00000005
+B5D56                             00000006
+B5D57                             00000007
+B5D6                              00000E7C
+B5D60                             00000000
+B5D61                             00000001
+B5D62                             00000002
+B5D63                             00000003
+B5D64                             00000004
+B5D65                             00000005
+B5D66                             00000006
+B5D67                             00000007
+B5D7                              00000E7D
+B5D70                             00000000
+B5D71                             00000001
+B5D72                             00000002
+B5D73                             00000003
+B5D74                             00000004
+B5D75                             00000005
+B5D76                             00000006
+B5D77                             00000007
+B5DLC                             00000E75
+B5EIDH                            00000E73
+B5EIDL                            00000E74
+B5IE                              00000007
+B5SIDH                            00000E71
+B5SIDL                            00000E72
+B5TXEN                            00000007
+BANKED                            00000001
+BAUDCON                           00000FB8
+BCLIE                             00000003
+BCLIF                             00000003
+BCLIP                             00000003
+BF                                00000000
+BGST                              00000005
+BIE0                              00000DFA
+BOR                               00000000
+MPASM  5.35                          FREE.ASM   8-13-2010  14:45:03         PAGE 30
+
+
+SYMBOL TABLE
+  LABEL                             VALUE 
+
+BRG16                             00000003
+BRGCON1                           00000F70
+BRGCON2                           00000F71
+BRGCON3                           00000F72
+BRGH                              00000002
+BRP0                              00000000
+BRP1                              00000001
+BRP2                              00000002
+BRP3                              00000003
+BRP4                              00000004
+BRP5                              00000005
+BSEL0                             00000DF8
+BSR                               00000FE0
+C                                 00000000
+CANCAP                            00000004
+CANCON                            00000F6F
+CANCON_RO0                        00000F5F
+CANCON_RO1                        00000F4F
+CANCON_RO2                        00000F3F
+CANCON_RO3                        00000F2F
+CANCON_RO4                        00000E7F
+CANCON_RO5                        00000E6F
+CANCON_RO6                        00000E5F
+CANCON_RO7                        00000E4F
+CANCON_RO8                        00000E3F
+CANCON_RO9                        00000E2F
+CANRX                             00000003
+CANSTAT                           00000F6E
+CANSTAT_RO0                       00000F5E
+CANSTAT_RO1                       00000F4E
+CANSTAT_RO2                       00000F3E
+CANSTAT_RO3                       00000F2E
+CANSTAT_RO4                       00000E7E
+CANSTAT_RO5                       00000E6E
+CANSTAT_RO6                       00000E5E
+CANSTAT_RO7                       00000E4E
+CANSTAT_RO8                       00000E3E
+CANSTAT_RO9                       00000E2E
+CANTX                             00000002
+CCP1                              00000002
+CCP1CON                           00000FBD
+CCP1IE                            00000002
+CCP1IF                            00000002
+CCP1IP                            00000002
+CCP1M0                            00000000
+CCP1M1                            00000001
+CCP1M2                            00000002
+CCP1M3                            00000003
+CCPR1                             00000FBE
+CCPR1H                            00000FBF
+CCPR1L                            00000FBE
+CFGS                              00000006
+CHS0                              00000002
+MPASM  5.35                          FREE.ASM   8-13-2010  14:45:03         PAGE 31
+
+
+SYMBOL TABLE
+  LABEL                             VALUE 
+
+CHS1                              00000003
+CHS2                              00000004
+CHS3                              00000005
+CIOCON                            00000F73
+CK                                00000006
+CKE                               00000006
+CKP                               00000004
+CLKI                              00000007
+CLKO                              00000006
+COMSTAT                           00000F74
+CREN                              00000004
+CSRC                              00000007
+CVREF                             00000000
+D                                 00000005
+DATA_ADDRESS                      00000005
+DC                                00000001
+DC1B0                             00000004
+DC1B1                             00000005
+DDRA                              TRISA
+DDRB                              TRISB
+DDRC                              TRISC
+DDRD                              TRISD
+DDRE                              TRISE
+DFLC0                             00000000
+DFLC1                             00000001
+DFLC2                             00000002
+DFLC3                             00000003
+DFLC4                             00000004
+DISABLE_INTERRUPTS                
+DLC0                              00000000
+DLC1                              00000001
+DLC2                              00000002
+DLC3                              00000003
+DONE                              00000001
+D_A                               00000005
+ECANCON                           00000F77
+EEADR                             00000FA9
+EEADRH                            00000FAA
+EECON1                            00000FA6
+EECON2                            00000FA7
+EEDATA                            00000FA8
+EEIE                              00000004
+EEIF                              00000004
+EEIP                              00000004
+EEPGD                             00000007
+EICODE0                           00000000
+EICODE1                           00000001
+EICODE2                           00000002
+EICODE3                           00000003
+EICODE4                           00000004
+EID0                              00000000
+EID1                              00000001
+EID10                             00000002
+MPASM  5.35                          FREE.ASM   8-13-2010  14:45:03         PAGE 32
+
+
+SYMBOL TABLE
+  LABEL                             VALUE 
+
+EID11                             00000003
+EID12                             00000004
+EID13                             00000005
+EID14                             00000006
+EID15                             00000007
+EID16                             00000000
+EID17                             00000001
+EID2                              00000002
+EID3                              00000003
+EID4                              00000004
+EID5                              00000005
+EID6                              00000006
+EID7                              00000007
+EID8                              00000000
+EID9                              00000001
+ENDRHI                            00000005
+ERRIE                             00000005
+ERRIF                             00000005
+ERRIP                             00000005
+EWARN                             00000000
+EWIN0                             00000000
+EWIN1                             00000001
+EWIN2                             00000002
+EWIN3                             00000003
+EWIN4                             00000004
+EXID                              00000003
+EXIDE                             00000003
+EXIDEN                            00000003
+Epilog                            00000132
+F                                 00000005
+F0BP_0                            00000000
+F0BP_1                            00000001
+F0BP_2                            00000002
+F0BP_3                            00000003
+F10BP_0                           00000000
+F10BP_1                           00000001
+F10BP_2                           00000002
+F10BP_3                           00000003
+F11BP_0                           00000004
+F11BP_1                           00000005
+F11BP_2                           00000006
+F11BP_3                           00000007
+F12BP_0                           00000000
+F12BP_1                           00000001
+F12BP_2                           00000002
+F12BP_3                           00000003
+F13BP_0                           00000004
+F13BP_1                           00000005
+F13BP_2                           00000006
+F13BP_3                           00000007
+F14BP_0                           00000000
+F14BP_1                           00000001
+F14BP_2                           00000002
+MPASM  5.35                          FREE.ASM   8-13-2010  14:45:03         PAGE 33
+
+
+SYMBOL TABLE
+  LABEL                             VALUE 
+
+F14BP_3                           00000003
+F15BP_0                           00000004
+F15BP_1                           00000005
+F15BP_2                           00000006
+F15BP_3                           00000007
+F1BP_0                            00000004
+F1BP_1                            00000005
+F1BP_2                            00000006
+F1BP_3                            00000007
+F2BP_0                            00000000
+F2BP_1                            00000001
+F2BP_2                            00000002
+F2BP_3                            00000003
+F3BP_0                            00000004
+F3BP_1                            00000005
+F3BP_2                            00000006
+F3BP_3                            00000007
+F4BP_0                            00000000
+F4BP_1                            00000001
+F4BP_2                            00000002
+F4BP_3                            00000003
+F5BP_0                            00000004
+F5BP_1                            00000005
+F5BP_2                            00000006
+F5BP_3                            00000007
+F6BP_0                            00000000
+F6BP_1                            00000001
+F6BP_2                            00000002
+F6BP_3                            00000003
+F7BP_0                            00000004
+F7BP_1                            00000005
+F7BP_2                            00000006
+F7BP_3                            00000007
+F8BP_0                            00000000
+F8BP_1                            00000001
+F8BP_2                            00000002
+F8BP_3                            00000003
+F9BP_0                            00000004
+F9BP_1                            00000005
+F9BP_2                            00000006
+F9BP_3                            00000007
+FAST                              00000001
+FERR                              00000002
+FIFOEMPTY                         00000007
+FIFOMWIE                          00000000
+FIFOWM                            00000005
+FIFOWMIE                          00000000
+FIFOWMIF                          00000000
+FIFOWMIP                          00000000
+FIL0_0                            00000000
+FIL0_1                            00000001
+FIL10_0                           00000004
+FIL10_1                           00000005
+MPASM  5.35                          FREE.ASM   8-13-2010  14:45:03         PAGE 34
+
+
+SYMBOL TABLE
+  LABEL                             VALUE 
+
+FIL11_0                           00000006
+FIL11_1                           00000007
+FIL12_0                           00000000
+FIL12_1                           00000001
+FIL13_0                           00000002
+FIL13_1                           00000003
+FIL14_0                           00000004
+FIL14_1                           00000005
+FIL15_0                           00000006
+FIL15_1                           00000007
+FIL1_0                            00000002
+FIL1_1                            00000003
+FIL2_0                            00000004
+FIL2_1                            00000005
+FIL3_0                            00000006
+FIL3_1                            00000007
+FIL4_0                            00000000
+FIL4_1                            00000001
+FIL5_0                            00000002
+FIL5_1                            00000003
+FIL6_0                            00000004
+FIL6_1                            00000005
+FIL7_0                            00000006
+FIL7_1                            00000007
+FIL8_0                            00000000
+FIL8_1                            00000001
+FIL9_0                            00000002
+FIL9_1                            00000003
+FILHIT0                           00000000
+FILHIT1                           00000001
+FILHIT2                           00000002
+FILHIT3                           00000003
+FILHIT4                           00000004
+FLC0                              00000000
+FLC1                              00000001
+FLC2                              00000002
+FLC3                              00000003
+FLC4                              00000004
+FLT0                              00000000
+FP0                               00000000
+FP1                               00000001
+FP2                               00000002
+FP3                               00000003
+FREE                              00000004
+FSR0                              00000000
+FSR0H                             00000FEA
+FSR0L                             00000FE9
+FSR1                              00000001
+FSR1H                             00000FE2
+FSR1L                             00000FE1
+FSR2                              00000002
+FSR2H                             00000FDA
+FSR2L                             00000FD9
+MPASM  5.35                          FREE.ASM   8-13-2010  14:45:03         PAGE 35
+
+
+SYMBOL TABLE
+  LABEL                             VALUE 
+
+Finish                            00000136
+GCEN                              00000007
+GIE                               00000007
+GIEH                              00000007
+GIEL                              00000006
+GO                                00000001
+GO_DONE                           00000001
+HEAP_SIZE                         1024
+HLVDCON                           00000FD2
+HLVDEN                            00000004
+HLVDIE                            00000002
+HLVDIF                            00000002
+HLVDIN                            00000005
+HLVDIP                            00000002
+HLVDL0                            00000000
+HLVDL1                            00000001
+HLVDL2                            00000002
+HLVDL3                            00000003
+I2C_DAT                           00000005
+I2C_READ                          00000002
+I2C_START                         00000003
+I2C_STOP                          00000004
+ICODE0                            00000000
+ICODE1                            00000001
+ICODE2                            00000002
+ICODE3                            00000003
+ICODE4                            00000004
+IDLEN                             00000007
+INDF0                             00000FEF
+INDF1                             00000FE7
+INDF2                             00000FDF
+INT0                              00000000
+INT0E                             00000004
+INT0F                             00000001
+INT0IE                            00000004
+INT0IF                            00000001
+INT1                              00000001
+INT1E                             00000003
+INT1F                             00000000
+INT1IE                            00000003
+INT1IF                            00000000
+INT1IP                            00000006
+INT1P                             00000006
+INT2                              00000002
+INT2E                             00000004
+INT2F                             00000001
+INT2IE                            00000004
+INT2IF                            00000001
+INT2IP                            00000007
+INT2P                             00000007
+INTCON                            00000FF2
+INTCON2                           00000FF1
+INTCON3                           00000FF0
+MPASM  5.35                          FREE.ASM   8-13-2010  14:45:03         PAGE 36
+
+
+SYMBOL TABLE
+  LABEL                             VALUE 
+
+INTEDG0                           00000006
+INTEDG1                           00000005
+INTEDG2                           00000004
+INTSCR                            00000007
+INTSRC                            00000007
+IOFS                              00000002
+IPEN                              00000007
+IPR1                              00000F9F
+IPR2                              00000FA2
+IPR3                              00000FA5
+IRCF0                             00000004
+IRCF1                             00000005
+IRCF2                             00000006
+IRVST                             00000005
+IRXIE                             00000007
+IRXIF                             00000007
+IRXIP                             00000007
+IVRST                             00000005
+JTOFF                             00000001
+KBI0                              00000004
+KBI1                              00000005
+KBI2                              00000006
+KBI3                              00000007
+LATA                              00000F89
+LATA0                             00000000
+LATA1                             00000001
+LATA2                             00000002
+LATA3                             00000003
+LATA4                             00000004
+LATA5                             00000005
+LATA6                             00000006
+LATA7                             00000007
+LATB                              00000F8A
+LATB0                             00000000
+LATB1                             00000001
+LATB2                             00000002
+LATB3                             00000003
+LATB4                             00000004
+LATB5                             00000005
+LATB6                             00000006
+LATB7                             00000007
+LATC                              00000F8B
+LATC0                             00000000
+LATC1                             00000001
+LATC2                             00000002
+LATC3                             00000003
+LATC4                             00000004
+LATC5                             00000005
+LATC6                             00000006
+LATC7                             00000007
+LOCALS_SIZE                       6
+LVDCON                            00000FD2
+LVDEN                             00000004
+MPASM  5.35                          FREE.ASM   8-13-2010  14:45:03         PAGE 37
+
+
+SYMBOL TABLE
+  LABEL                             VALUE 
+
+LVDIE                             00000002
+LVDIF                             00000002
+LVDIN                             00000005
+LVDIP                             00000002
+LVDL0                             00000000
+LVDL1                             00000001
+LVDL2                             00000002
+LVDL3                             00000003
+LVV0                              00000000
+LVV1                              00000001
+LVV2                              00000002
+LVV3                              00000003
+Loop                              00000038
+MDSEL0                            00000006
+MDSEL1                            00000007
+MSEL0                             00000DF0
+MSEL1                             00000DF1
+MSEL2                             00000DF2
+MSEL3                             00000DF3
+N                                 00000004
+NOT_A                             00000005
+NOT_ADDRESS                       00000005
+NOT_BOR                           00000000
+NOT_DONE                          00000001
+NOT_PD                            00000002
+NOT_POR                           00000001
+NOT_RBPU                          00000007
+NOT_RI                            00000004
+NOT_SS                            00000005
+NOT_T1SYNC                        00000002
+NOT_T3SYNC                        00000002
+NOT_TO                            00000003
+NOT_W                             00000002
+NOT_WRITE                         00000002
+NotNULL                           0000001C
+OERR                              00000001
+OPMODE                            00000005
+OPMODE0                           00000005
+OPMODE1                           00000006
+OPMODE2                           00000007
+OSC1                              00000007
+OSC2                              00000006
+OSCCON                            00000FD3
+OSCFIE                            00000007
+OSCFIF                            00000007
+OSCFIP                            00000007
+OSCTUNE                           00000F9B
+OSTS                              00000003
+OV                                00000003
+P                                 00000004
+PC                                00000FF9
+PCFG0                             00000000
+PCFG1                             00000001
+MPASM  5.35                          FREE.ASM   8-13-2010  14:45:03         PAGE 38
+
+
+SYMBOL TABLE
+  LABEL                             VALUE 
+
+PCFG2                             00000002
+PCFG3                             00000003
+PCL                               00000FF9
+PCLATH                            00000FFA
+PCLATU                            00000FFB
+PD                                00000002
+PEIE                              00000006
+PEN                               00000002
+PGC                               00000006
+PGD                               00000007
+PGM                               00000005
+PIE1                              00000F9D
+PIE2                              00000FA0
+PIE3                              00000FA3
+PIR1                              00000F9E
+PIR2                              00000FA1
+PIR3                              00000FA4
+PLLEN                             00000006
+PLUSW0                            00000FEB
+PLUSW1                            00000FE3
+PLUSW2                            00000FDB
+POR                               00000001
+PORTA                             00000F80
+PORTB                             00000F81
+PORTC                             00000F82
+PORTE                             00000F84
+POSTDEC0                          00000FED
+POSTDEC1                          00000FE5
+POSTDEC2                          00000FDD
+POSTINC0                          00000FEE
+POSTINC1                          00000FE6
+POSTINC2                          00000FDE
+PR2                               00000FCB
+PREINC0                           00000FEC
+PREINC1                           00000FE4
+PREINC2                           00000FDC
+PROD                              00000FF3
+PRODH                             00000FF4
+PRODL                             00000FF3
+PRSEG0                            00000000
+PRSEG1                            00000001
+PRSEG2                            00000002
+PSA                               00000003
+R                                 00000002
+RA0                               00000000
+RA1                               00000001
+RA2                               00000002
+RA3                               00000003
+RA4                               00000004
+RA5                               00000005
+RA6                               00000006
+RA7                               00000007
+RB0_B0DLC                         00000004
+MPASM  5.35                          FREE.ASM   8-13-2010  14:45:03         PAGE 39
+
+
+SYMBOL TABLE
+  LABEL                             VALUE 
+
+RB0_B1DLC                         00000004
+RB0_B2DLC                         00000004
+RB0_B3DLC                         00000004
+RB0_B4DLC                         00000004
+RB0_B5DLC                         00000004
+RB0_DDRB                          00000000
+RB0_PORTB                         00000000
+RB0_RXB0DLC                       00000004
+RB0_RXB1DLC                       00000004
+RB1_B0DLC                         00000005
+RB1_B1DLC                         00000005
+RB1_B2DLC                         00000005
+RB1_B3DLC                         00000005
+RB1_B4DLC                         00000005
+RB1_B5DLC                         00000005
+RB1_DDRB                          00000001
+RB1_PORTB                         00000001
+RB1_RXB0DLC                       00000005
+RB1_RXB1DLC                       00000005
+RB2                               00000002
+RB3                               00000003
+RB4                               00000004
+RB5                               00000005
+RB6                               00000006
+RB7                               00000007
+RBIE                              00000003
+RBIF                              00000000
+RBIP                              00000000
+RBPU                              00000007
+RC0                               00000000
+RC1                               00000001
+RC2                               00000002
+RC3                               00000003
+RC4                               00000004
+RC5                               00000005
+RC6                               00000006
+RC7                               00000007
+RCEN                              00000003
+RCIDL                             00000006
+RCIE                              00000005
+RCIF                              00000005
+RCIP                              00000005
+RCON                              00000FD0
+RCREG                             00000FAE
+RCSTA                             00000FAB
+RD                                00000000
+RD16                              00000007
+RE3                               00000003
+READ_WRITE                        00000002
+REC0                              00000000
+REC1                              00000001
+REC2                              00000002
+REC3                              00000003
+MPASM  5.35                          FREE.ASM   8-13-2010  14:45:03         PAGE 40
+
+
+SYMBOL TABLE
+  LABEL                             VALUE 
+
+REC4                              00000004
+REC5                              00000005
+REC6                              00000006
+REC7                              00000007
+REQOP0                            00000005
+REQOP1                            00000006
+REQOP2                            00000007
+RESRB0                            00000004
+RESRB1                            00000005
+RESTORE_INTERRUPTS                
+RI                                00000004
+RSEN                              00000001
+RTREN                             00000002
+RTRRO                             00000005
+RX                                00000007
+RX9                               00000006
+RX9D                              00000000
+RXB0CON                           00000F60
+RXB0D0                            00000F66
+RXB0D00                           00000000
+RXB0D01                           00000001
+RXB0D02                           00000002
+RXB0D03                           00000003
+RXB0D04                           00000004
+RXB0D05                           00000005
+RXB0D06                           00000006
+RXB0D07                           00000007
+RXB0D1                            00000F67
+RXB0D10                           00000000
+RXB0D11                           00000001
+RXB0D12                           00000002
+RXB0D13                           00000003
+RXB0D14                           00000004
+RXB0D15                           00000005
+RXB0D16                           00000006
+RXB0D17                           00000007
+RXB0D2                            00000F68
+RXB0D20                           00000000
+RXB0D21                           00000001
+RXB0D22                           00000002
+RXB0D23                           00000003
+RXB0D24                           00000004
+RXB0D25                           00000005
+RXB0D26                           00000006
+RXB0D27                           00000007
+RXB0D3                            00000F69
+RXB0D30                           00000000
+RXB0D31                           00000001
+RXB0D32                           00000002
+RXB0D33                           00000003
+RXB0D34                           00000004
+RXB0D35                           00000005
+RXB0D36                           00000006
+MPASM  5.35                          FREE.ASM   8-13-2010  14:45:03         PAGE 41
+
+
+SYMBOL TABLE
+  LABEL                             VALUE 
+
+RXB0D37                           00000007
+RXB0D4                            00000F6A
+RXB0D40                           00000000
+RXB0D41                           00000001
+RXB0D42                           00000002
+RXB0D43                           00000003
+RXB0D44                           00000004
+RXB0D45                           00000005
+RXB0D46                           00000006
+RXB0D47                           00000007
+RXB0D5                            00000F6B
+RXB0D50                           00000000
+RXB0D51                           00000001
+RXB0D52                           00000002
+RXB0D53                           00000003
+RXB0D54                           00000004
+RXB0D55                           00000005
+RXB0D56                           00000006
+RXB0D57                           00000007
+RXB0D6                            00000F6C
+RXB0D60                           00000000
+RXB0D61                           00000001
+RXB0D62                           00000002
+RXB0D63                           00000003
+RXB0D64                           00000004
+RXB0D65                           00000005
+RXB0D66                           00000006
+RXB0D67                           00000007
+RXB0D7                            00000F6D
+RXB0D70                           00000000
+RXB0D71                           00000001
+RXB0D72                           00000002
+RXB0D73                           00000003
+RXB0D74                           00000004
+RXB0D75                           00000005
+RXB0D76                           00000006
+RXB0D77                           00000007
+RXB0DBEN                          00000002
+RXB0DLC                           00000F65
+RXB0EIDH                          00000F63
+RXB0EIDL                          00000F64
+RXB0IE                            00000000
+RXB0IF                            00000000
+RXB0IP                            00000000
+RXB0OVFL                          00000007
+RXB0SIDH                          00000F61
+RXB0SIDL                          00000F62
+RXB1CON                           00000F50
+RXB1D0                            00000F56
+RXB1D00                           00000000
+RXB1D01                           00000001
+RXB1D02                           00000002
+RXB1D03                           00000003
+MPASM  5.35                          FREE.ASM   8-13-2010  14:45:03         PAGE 42
+
+
+SYMBOL TABLE
+  LABEL                             VALUE 
+
+RXB1D04                           00000004
+RXB1D05                           00000005
+RXB1D06                           00000006
+RXB1D07                           00000007
+RXB1D1                            00000F57
+RXB1D10                           00000000
+RXB1D11                           00000001
+RXB1D12                           00000002
+RXB1D13                           00000003
+RXB1D14                           00000004
+RXB1D15                           00000005
+RXB1D16                           00000006
+RXB1D17                           00000007
+RXB1D2                            00000F58
+RXB1D20                           00000000
+RXB1D21                           00000001
+RXB1D22                           00000002
+RXB1D23                           00000003
+RXB1D24                           00000004
+RXB1D25                           00000005
+RXB1D26                           00000006
+RXB1D27                           00000007
+RXB1D3                            00000F59
+RXB1D30                           00000000
+RXB1D31                           00000001
+RXB1D32                           00000002
+RXB1D33                           00000003
+RXB1D34                           00000004
+RXB1D35                           00000005
+RXB1D36                           00000006
+RXB1D37                           00000007
+RXB1D4                            00000F5A
+RXB1D40                           00000000
+RXB1D41                           00000001
+RXB1D42                           00000002
+RXB1D43                           00000003
+RXB1D44                           00000004
+RXB1D45                           00000005
+RXB1D46                           00000006
+RXB1D47                           00000007
+RXB1D5                            00000F5B
+RXB1D50                           00000000
+RXB1D51                           00000001
+RXB1D52                           00000002
+RXB1D53                           00000003
+RXB1D54                           00000004
+RXB1D55                           00000005
+RXB1D56                           00000006
+RXB1D57                           00000007
+RXB1D6                            00000F5C
+RXB1D60                           00000000
+RXB1D61                           00000001
+RXB1D62                           00000002
+MPASM  5.35                          FREE.ASM   8-13-2010  14:45:03         PAGE 43
+
+
+SYMBOL TABLE
+  LABEL                             VALUE 
+
+RXB1D63                           00000003
+RXB1D64                           00000004
+RXB1D65                           00000005
+RXB1D66                           00000006
+RXB1D67                           00000007
+RXB1D7                            00000F5D
+RXB1D70                           00000000
+RXB1D71                           00000001
+RXB1D72                           00000002
+RXB1D73                           00000003
+RXB1D74                           00000004
+RXB1D75                           00000005
+RXB1D76                           00000006
+RXB1D77                           00000007
+RXB1DLC                           00000F55
+RXB1EIDH                          00000F53
+RXB1EIDL                          00000F54
+RXB1IE                            00000001
+RXB1IF                            00000001
+RXB1IP                            00000001
+RXB1OVFL                          00000006
+RXB1SIDH                          00000F51
+RXB1SIDL                          00000F52
+RXBODBEN                          00000002
+RXBP                              00000003
+RXBnIE                            00000001
+RXBnIF                            00000001
+RXBnIP                            00000001
+RXBnOVFL                          00000006
+RXERRCNT                          00000F75
+RXF0EIDH                          00000F02
+RXF0EIDL                          00000F03
+RXF0EN                            00000000
+RXF0SIDH                          00000F00
+RXF0SIDL                          00000F01
+RXF10EIDH                         00000D76
+RXF10EIDL                         00000D77
+RXF10EN                           00000002
+RXF10SIDH                         00000D74
+RXF10SIDL                         00000D75
+RXF11EIDH                         00000D7A
+RXF11EIDL                         00000D7B
+RXF11EN                           00000003
+RXF11SIDH                         00000D78
+RXF11SIDL                         00000D79
+RXF12EIDH                         00000D82
+RXF12EIDL                         00000D83
+RXF12EN                           00000004
+RXF12SIDH                         00000D80
+RXF12SIDL                         00000D81
+RXF13EIDH                         00000D86
+RXF13EIDL                         00000D87
+RXF13EN                           00000005
+MPASM  5.35                          FREE.ASM   8-13-2010  14:45:03         PAGE 44
+
+
+SYMBOL TABLE
+  LABEL                             VALUE 
+
+RXF13SIDH                         00000D84
+RXF13SIDL                         00000D85
+RXF14EIDH                         00000D8A
+RXF14EIDL                         00000D8B
+RXF14EN                           00000006
+RXF14SIDH                         00000D88
+RXF14SIDL                         00000D89
+RXF15EIDH                         00000D92
+RXF15EIDL                         00000D93
+RXF15EN                           00000007
+RXF15SIDH                         00000D90
+RXF15SIDL                         00000D91
+RXF1EIDH                          00000F06
+RXF1EIDL                          00000F07
+RXF1EN                            00000001
+RXF1SIDH                          00000F04
+RXF1SIDL                          00000F05
+RXF2EIDH                          00000F0A
+RXF2EIDL                          00000F0B
+RXF2EN                            00000002
+RXF2SIDH                          00000F08
+RXF2SIDL                          00000F09
+RXF3EIDH                          00000F0E
+RXF3EIDL                          00000F0F
+RXF3EN                            00000003
+RXF3SIDH                          00000F0C
+RXF3SIDL                          00000F0D
+RXF4EIDH                          00000F12
+RXF4EIDL                          00000F13
+RXF4EN                            00000004
+RXF4SIDH                          00000F10
+RXF4SIDL                          00000F11
+RXF5EIDH                          00000F16
+RXF5EIDL                          00000F17
+RXF5EN                            00000005
+RXF5SIDH                          00000F14
+RXF5SIDL                          00000F15
+RXF6EIDH                          00000D62
+RXF6EIDL                          00000D63
+RXF6EN                            00000006
+RXF6SIDH                          00000D60
+RXF6SIDL                          00000D61
+RXF7EIDH                          00000D66
+RXF7EIDL                          00000D67
+RXF7EN                            00000007
+RXF7SIDH                          00000D64
+RXF7SIDL                          00000D65
+RXF8EIDH                          00000D6A
+RXF8EIDL                          00000D6B
+RXF8EN                            00000000
+RXF8SIDH                          00000D68
+RXF8SIDL                          00000D69
+RXF9EIDH                          00000D72
+MPASM  5.35                          FREE.ASM   8-13-2010  14:45:03         PAGE 45
+
+
+SYMBOL TABLE
+  LABEL                             VALUE 
+
+RXF9EIDL                          00000D73
+RXF9EN                            00000001
+RXF9SIDH                          00000D70
+RXF9SIDL                          00000D71
+RXFBCON0                          00000DE0
+RXFBCON1                          00000DE1
+RXFBCON2                          00000DE2
+RXFBCON3                          00000DE3
+RXFBCON4                          00000DE4
+RXFBCON5                          00000DE5
+RXFBCON6                          00000DE6
+RXFBCON7                          00000DE7
+RXFCON0                           00000DD4
+RXFCON1                           00000DD5
+RXFUL                             00000007
+RXM0                              00000005
+RXM0EIDH                          00000F1A
+RXM0EIDL                          00000F1B
+RXM0SIDH                          00000F18
+RXM0SIDL                          00000F19
+RXM1                              00000006
+RXM1EIDH                          00000F1E
+RXM1EIDL                          00000F1F
+RXM1SIDH                          00000F1C
+RXM1SIDL                          00000F1D
+RXRTR                             00000006
+RXRTRRO_B0CON                     00000005
+RXRTRRO_B1CON                     00000005
+RXRTRRO_B2CON                     00000005
+RXRTRRO_B3CON                     00000005
+RXRTRRO_B4CON                     00000005
+RXRTRRO_B5CON                     00000005
+RXRTRRO_RXB0CON                   00000003
+RXRTRRO_RXB1CON                   00000003
+RXWARN                            00000001
+R_W                               00000002
+S                                 00000003
+SAM                               00000006
+SBOREN                            00000006
+SCK                               00000003
+SCKP                              00000004
+SCL                               00000003
+SCS0                              00000000
+SCS1                              00000001
+SDA                               00000004
+SDFLC                             00000DD8
+SDI                               00000004
+SDO                               00000005
+SEG1PH0                           00000003
+SEG1PH1                           00000004
+SEG1PH2                           00000005
+SEG2PH0                           00000000
+SEG2PH1                           00000001
+MPASM  5.35                          FREE.ASM   8-13-2010  14:45:03         PAGE 46
+
+
+SYMBOL TABLE
+  LABEL                             VALUE 
+
+SEG2PH2                           00000002
+SEG2PHT                           00000007
+SEG2PHTS                          00000007
+SEN                               00000000
+SENDB                             00000003
+SID0                              00000005
+SID1                              00000006
+SID10                             00000007
+SID2                              00000007
+SID3                              00000000
+SID4                              00000001
+SID5                              00000002
+SID6                              00000003
+SID7                              00000004
+SID8                              00000005
+SID9                              00000006
+SJW0                              00000006
+SJW1                              00000007
+SMP                               00000007
+SPBRG                             00000FAF
+SPBRGH                            00000FB0
+SPEN                              00000007
+SREN                              00000005
+SRR                               00000004
+SS                                00000005
+SSPADD                            00000FC8
+SSPBUF                            00000FC9
+SSPCON1                           00000FC6
+SSPCON2                           00000FC5
+SSPEN                             00000005
+SSPIE                             00000003
+SSPIF                             00000003
+SSPIP                             00000003
+SSPM0                             00000000
+SSPM1                             00000001
+SSPM2                             00000002
+SSPM3                             00000003
+SSPOV                             00000006
+SSPSTAT                           00000FC7
+STACK_SIZE                        0x100
+STATUS                            00000FD8
+STKFUL                            00000007
+STKOVF                            00000007
+STKPTR                            00000FFC
+STKPTR0                           00000000
+STKPTR1                           00000001
+STKPTR2                           00000002
+STKPTR3                           00000003
+STKPTR4                           00000004
+STKUNF                            00000006
+SWDTE                             00000000
+SWDTEN                            00000000
+SYNC                              00000004
+MPASM  5.35                          FREE.ASM   8-13-2010  14:45:03         PAGE 47
+
+
+SYMBOL TABLE
+  LABEL                             VALUE 
+
+T08BIT                            00000006
+T0CKI                             00000004
+T0CON                             00000FD5
+T0CS                              00000005
+T0IE                              00000005
+T0IF                              00000002
+T0IP                              00000002
+T0PS0                             00000000
+T0PS1                             00000001
+T0PS2                             00000002
+T0PS3                             00000003
+T0SE                              00000004
+T13CKI                            00000000
+T1CKPS0                           00000004
+T1CKPS1                           00000005
+T1CON                             00000FCD
+T1INSYNC                          00000002
+T1OSCEN                           00000003
+T1OSI                             00000001
+T1OSO                             00000000
+T1RUN                             00000006
+T1SYNC                            00000002
+T2CKPS0                           00000000
+T2CKPS1                           00000001
+T2CON                             00000FCA
+T2OUTPS0                          00000003
+T2OUTPS1                          00000004
+T2OUTPS2                          00000005
+T2OUTPS3                          00000006
+T3CCP1                            00000003
+T3CCP2                            00000006
+T3CKPS0                           00000004
+T3CKPS1                           00000005
+T3CON                             00000FB1
+T3ECCP1                           00000006
+T3NSYNC                           00000002
+T3SYNC                            00000002
+TABLAT                            00000FF5
+TBLPTR                            00000FF6
+TBLPTRH                           00000FF7
+TBLPTRL                           00000FF6
+TBLPTRU                           00000FF8
+TEC0                              00000000
+TEC1                              00000001
+TEC2                              00000002
+TEC3                              00000003
+TEC4                              00000004
+TEC5                              00000005
+TEC6                              00000006
+TEC7                              00000007
+TMR0H                             00000FD7
+TMR0IE                            00000005
+TMR0IF                            00000002
+MPASM  5.35                          FREE.ASM   8-13-2010  14:45:03         PAGE 48
+
+
+SYMBOL TABLE
+  LABEL                             VALUE 
+
+TMR0IP                            00000002
+TMR0L                             00000FD6
+TMR0ON                            00000007
+TMR1CS                            00000001
+TMR1H                             00000FCF
+TMR1IE                            00000000
+TMR1IF                            00000000
+TMR1IP                            00000000
+TMR1L                             00000FCE
+TMR1ON                            00000000
+TMR2                              00000FCC
+TMR2IE                            00000001
+TMR2IF                            00000001
+TMR2IP                            00000001
+TMR2ON                            00000002
+TMR3CS                            00000001
+TMR3H                             00000FB3
+TMR3IE                            00000001
+TMR3IF                            00000001
+TMR3IP                            00000001
+TMR3L                             00000FB2
+TMR3ON                            00000000
+TO                                00000003
+TOS                               00000FFD
+TOSH                              00000FFE
+TOSL                              00000FFD
+TOSU                              00000FFF
+TRISA                             00000F92
+TRISA0                            00000000
+TRISA1                            00000001
+TRISA2                            00000002
+TRISA3                            00000003
+TRISA4                            00000004
+TRISA5                            00000005
+TRISA6                            00000006
+TRISA7                            00000007
+TRISB                             00000F93
+TRISB0                            00000000
+TRISB1                            00000001
+TRISB2                            00000002
+TRISB3                            00000003
+TRISB4                            00000004
+TRISB5                            00000005
+TRISB6                            00000006
+TRISB7                            00000007
+TRISC                             00000F94
+TRISC0                            00000000
+TRISC1                            00000001
+TRISC2                            00000002
+TRISC3                            00000003
+TRISC4                            00000004
+TRISC5                            00000005
+TRISC6                            00000006
+MPASM  5.35                          FREE.ASM   8-13-2010  14:45:03         PAGE 49
+
+
+SYMBOL TABLE
+  LABEL                             VALUE 
+
+TRISC7                            00000007
+TRMT                              00000001
+TUN0                              00000000
+TUN1                              00000001
+TUN2                              00000002
+TUN3                              00000003
+TUN4                              00000004
+TX                                00000006
+TX9                               00000006
+TX9D                              00000000
+TXABT                             00000006
+TXB0CON                           00000F40
+TXB0D0                            00000F46
+TXB0D00                           00000000
+TXB0D01                           00000001
+TXB0D02                           00000002
+TXB0D03                           00000003
+TXB0D04                           00000004
+TXB0D05                           00000005
+TXB0D06                           00000006
+TXB0D07                           00000007
+TXB0D1                            00000F47
+TXB0D10                           00000000
+TXB0D11                           00000001
+TXB0D12                           00000002
+TXB0D13                           00000003
+TXB0D14                           00000004
+TXB0D15                           00000005
+TXB0D16                           00000006
+TXB0D17                           00000007
+TXB0D2                            00000F48
+TXB0D20                           00000000
+TXB0D21                           00000001
+TXB0D22                           00000002
+TXB0D23                           00000003
+TXB0D24                           00000004
+TXB0D25                           00000005
+TXB0D26                           00000006
+TXB0D27                           00000007
+TXB0D3                            00000F49
+TXB0D30                           00000000
+TXB0D31                           00000001
+TXB0D32                           00000002
+TXB0D33                           00000003
+TXB0D34                           00000004
+TXB0D35                           00000005
+TXB0D36                           00000006
+TXB0D37                           00000007
+TXB0D4                            00000F4A
+TXB0D40                           00000000
+TXB0D41                           00000001
+TXB0D42                           00000002
+TXB0D43                           00000003
+MPASM  5.35                          FREE.ASM   8-13-2010  14:45:03         PAGE 50
+
+
+SYMBOL TABLE
+  LABEL                             VALUE 
+
+TXB0D44                           00000004
+TXB0D45                           00000005
+TXB0D46                           00000006
+TXB0D47                           00000007
+TXB0D5                            00000F4B
+TXB0D50                           00000000
+TXB0D51                           00000001
+TXB0D52                           00000002
+TXB0D53                           00000003
+TXB0D54                           00000004
+TXB0D55                           00000005
+TXB0D56                           00000006
+TXB0D57                           00000007
+TXB0D6                            00000F4C
+TXB0D60                           00000000
+TXB0D61                           00000001
+TXB0D62                           00000002
+TXB0D63                           00000003
+TXB0D64                           00000004
+TXB0D65                           00000005
+TXB0D66                           00000006
+TXB0D67                           00000007
+TXB0D7                            00000F4D
+TXB0D70                           00000000
+TXB0D71                           00000001
+TXB0D72                           00000002
+TXB0D73                           00000003
+TXB0D74                           00000004
+TXB0D75                           00000005
+TXB0D76                           00000006
+TXB0D77                           00000007
+TXB0DLC                           00000F45
+TXB0EIDH                          00000F43
+TXB0EIDL                          00000F44
+TXB0IE                            00000002
+TXB0IF                            00000002
+TXB0IP                            00000002
+TXB0SIDH                          00000F41
+TXB0SIDL                          00000F42
+TXB1CON                           00000F30
+TXB1D0                            00000F36
+TXB1D00                           00000000
+TXB1D01                           00000001
+TXB1D02                           00000002
+TXB1D03                           00000003
+TXB1D04                           00000004
+TXB1D05                           00000005
+TXB1D06                           00000006
+TXB1D07                           00000007
+TXB1D1                            00000F37
+TXB1D10                           00000000
+TXB1D11                           00000001
+TXB1D12                           00000002
+MPASM  5.35                          FREE.ASM   8-13-2010  14:45:03         PAGE 51
+
+
+SYMBOL TABLE
+  LABEL                             VALUE 
+
+TXB1D13                           00000003
+TXB1D14                           00000004
+TXB1D15                           00000005
+TXB1D16                           00000006
+TXB1D17                           00000007
+TXB1D2                            00000F38
+TXB1D20                           00000000
+TXB1D21                           00000001
+TXB1D22                           00000002
+TXB1D23                           00000003
+TXB1D24                           00000004
+TXB1D25                           00000005
+TXB1D26                           00000006
+TXB1D27                           00000007
+TXB1D3                            00000F39
+TXB1D30                           00000000
+TXB1D31                           00000001
+TXB1D32                           00000002
+TXB1D33                           00000003
+TXB1D34                           00000004
+TXB1D35                           00000005
+TXB1D36                           00000006
+TXB1D37                           00000007
+TXB1D4                            00000F3A
+TXB1D40                           00000000
+TXB1D41                           00000001
+TXB1D42                           00000002
+TXB1D43                           00000003
+TXB1D44                           00000004
+TXB1D45                           00000005
+TXB1D46                           00000006
+TXB1D47                           00000007
+TXB1D5                            00000F3B
+TXB1D50                           00000000
+TXB1D51                           00000001
+TXB1D52                           00000002
+TXB1D53                           00000003
+TXB1D54                           00000004
+TXB1D55                           00000005
+TXB1D56                           00000006
+TXB1D57                           00000007
+TXB1D6                            00000F3C
+TXB1D60                           00000000
+TXB1D61                           00000001
+TXB1D62                           00000002
+TXB1D63                           00000003
+TXB1D64                           00000004
+TXB1D65                           00000005
+TXB1D66                           00000006
+TXB1D67                           00000007
+TXB1D7                            00000F3D
+TXB1D70                           00000000
+TXB1D71                           00000001
+MPASM  5.35                          FREE.ASM   8-13-2010  14:45:03         PAGE 52
+
+
+SYMBOL TABLE
+  LABEL                             VALUE 
+
+TXB1D72                           00000002
+TXB1D73                           00000003
+TXB1D74                           00000004
+TXB1D75                           00000005
+TXB1D76                           00000006
+TXB1D77                           00000007
+TXB1DLC                           00000F35
+TXB1EIDH                          00000F33
+TXB1EIDL                          00000F34
+TXB1IE                            00000003
+TXB1IF                            00000003
+TXB1IP                            00000003
+TXB1SIDH                          00000F31
+TXB1SIDL                          00000F32
+TXB2CON                           00000F20
+TXB2D0                            00000F26
+TXB2D00                           00000000
+TXB2D01                           00000001
+TXB2D02                           00000002
+TXB2D03                           00000003
+TXB2D04                           00000004
+TXB2D05                           00000005
+TXB2D06                           00000006
+TXB2D07                           00000007
+TXB2D1                            00000F27
+TXB2D10                           00000000
+TXB2D11                           00000001
+TXB2D12                           00000002
+TXB2D13                           00000003
+TXB2D14                           00000004
+TXB2D15                           00000005
+TXB2D16                           00000006
+TXB2D17                           00000007
+TXB2D2                            00000F28
+TXB2D20                           00000000
+TXB2D21                           00000001
+TXB2D22                           00000002
+TXB2D23                           00000003
+TXB2D24                           00000004
+TXB2D25                           00000005
+TXB2D26                           00000006
+TXB2D27                           00000007
+TXB2D3                            00000F29
+TXB2D30                           00000000
+TXB2D31                           00000001
+TXB2D32                           00000002
+TXB2D33                           00000003
+TXB2D34                           00000004
+TXB2D35                           00000005
+TXB2D36                           00000006
+TXB2D37                           00000007
+TXB2D4                            00000F2A
+TXB2D40                           00000000
+MPASM  5.35                          FREE.ASM   8-13-2010  14:45:03         PAGE 53
+
+
+SYMBOL TABLE
+  LABEL                             VALUE 
+
+TXB2D41                           00000001
+TXB2D42                           00000002
+TXB2D43                           00000003
+TXB2D44                           00000004
+TXB2D45                           00000005
+TXB2D46                           00000006
+TXB2D47                           00000007
+TXB2D5                            00000F2B
+TXB2D50                           00000000
+TXB2D51                           00000001
+TXB2D52                           00000002
+TXB2D53                           00000003
+TXB2D54                           00000004
+TXB2D55                           00000005
+TXB2D56                           00000006
+TXB2D57                           00000007
+TXB2D6                            00000F2C
+TXB2D60                           00000000
+TXB2D61                           00000001
+TXB2D62                           00000002
+TXB2D63                           00000003
+TXB2D64                           00000004
+TXB2D65                           00000005
+TXB2D66                           00000006
+TXB2D67                           00000007
+TXB2D7                            00000F2D
+TXB2D70                           00000000
+TXB2D71                           00000001
+TXB2D72                           00000002
+TXB2D73                           00000003
+TXB2D74                           00000004
+TXB2D75                           00000005
+TXB2D76                           00000006
+TXB2D77                           00000007
+TXB2DLC                           00000F25
+TXB2EIDH                          00000F23
+TXB2EIDL                          00000F24
+TXB2IE                            00000004
+TXB2IF                            00000004
+TXB2IP                            00000004
+TXB2SIDH                          00000F21
+TXB2SIDL                          00000F22
+TXBIE                             00000DFC
+TXBIF                             00000007
+TXBIFBXB2CON                      00000007
+TXBIFTXB1CON                      00000007
+TXBIP                             00000004
+TXBO                              00000005
+TXBP                              00000004
+TXBnIE                            00000004
+TXBnIF                            00000004
+TXBnIP                            00000004
+TXEN                              00000005
+MPASM  5.35                          FREE.ASM   8-13-2010  14:45:03         PAGE 54
+
+
+SYMBOL TABLE
+  LABEL                             VALUE 
+
+TXERR                             00000004
+TXERRCNT                          00000F76
+TXIE                              00000004
+TXIF                              00000004
+TXIP                              00000004
+TXLARB                            00000005
+TXPRI0                            00000000
+TXPRI1                            00000001
+TXREG                             00000FAD
+TXREQ                             00000003
+TXRTR                             00000006
+TXSTA                             00000FAC
+TXWARN                            00000002
+UA                                00000001
+USING_FREE_RTOS                   1
+VCFG0                             00000004
+VCFG1                             00000005
+VDIRMAG                           00000007
+VREFM                             00000002
+VREFP                             00000003
+W                                 00000000
+WAKDIS                            00000007
+WAKFIL                            00000006
+WAKIE                             00000006
+WAKIF                             00000006
+WAKIP                             00000006
+WCOL                              00000007
+WDTCON                            00000FD1
+WIN0                              00000001
+WIN1                              00000002
+WIN2                              00000003
+WR                                00000001
+WREG                              00000FE8
+WREN                              00000002
+WRERR                             00000003
+WUE                               00000001
+Z                                 00000002
+_BBSIZ_1024_4L                    000000CF
+_BBSIZ_2048_4L                    000000DF
+_BBSIZ_4096_4L                    000000EF
+_BOREN_BOACTIVE_2L                000000FD
+_BOREN_BOHW_2L                    000000FF
+_BOREN_OFF_2L                     000000F9
+_BOREN_SBORENCTRL_2L              000000FB
+_BORV_0_2L                        000000E7
+_BORV_1_2L                        000000EF
+_BORV_2_2L                        000000F7
+_BORV_3_2L                        000000FF
+_CONFIG1H                         00300001
+_CONFIG2H                         00300003
+_CONFIG2L                         00300002
+_CONFIG3H                         00300005
+_CONFIG4L                         00300006
+MPASM  5.35                          FREE.ASM   8-13-2010  14:45:03         PAGE 55
+
+
+SYMBOL TABLE
+  LABEL                             VALUE 
+
+_CONFIG5H                         00300009
+_CONFIG5L                         00300008
+_CONFIG6H                         0030000B
+_CONFIG6L                         0030000A
+_CONFIG7H                         0030000D
+_CONFIG7L                         0030000C
+_CP0_OFF_5L                       000000FF
+_CP0_ON_5L                        000000FE
+_CP1_OFF_5L                       000000FF
+_CP1_ON_5L                        000000FD
+_CP2_OFF_5L                       000000FF
+_CP2_ON_5L                        000000FB
+_CP3_OFF_5L                       000000FF
+_CP3_ON_5L                        000000F7
+_CPB_OFF_5H                       000000FF
+_CPB_ON_5H                        000000BF
+_CPD_OFF_5H                       000000FF
+_CPD_ON_5H                        0000007F
+_DEBUG_OFF_4L                     000000FF
+_DEBUG_ON_4L                      0000007F
+_DEVID1                           003FFFFE
+_DEVID2                           003FFFFF
+_EBTR0_OFF_7L                     000000FF
+_EBTR0_ON_7L                      000000FE
+_EBTR1_OFF_7L                     000000FF
+_EBTR1_ON_7L                      000000FD
+_EBTR2_OFF_7L                     000000FF
+_EBTR2_ON_7L                      000000FB
+_EBTR3_OFF_7L                     000000FF
+_EBTR3_ON_7L                      000000F7
+_EBTRB_OFF_7H                     000000FF
+_EBTRB_ON_7H                      000000BF
+_FCMEN_OFF_1H                     000000BF
+_FCMEN_ON_1H                      000000FF
+_IDLOC0                           00200000
+_IDLOC1                           00200001
+_IDLOC2                           00200002
+_IDLOC3                           00200003
+_IDLOC4                           00200004
+_IDLOC5                           00200005
+_IDLOC6                           00200006
+_IDLOC7                           00200007
+_IESO_OFF_1H                      0000007F
+_IESO_ON_1H                       000000FF
+_LPT1OSC_OFF_3H                   000000FB
+_LPT1OSC_ON_3H                    000000FF
+_LVP_OFF_4L                       000000FB
+_LVP_ON_4L                        000000FF
+_MCLRE_OFF_3H                     0000007F
+_MCLRE_ON_3H                      000000FF
+_OSC_ECIO_1H                      000000F5
+_OSC_EC_1H                        000000F4
+_OSC_HSPLL_1H                     000000F6
+MPASM  5.35                          FREE.ASM   8-13-2010  14:45:03         PAGE 56
+
+
+SYMBOL TABLE
+  LABEL                             VALUE 
+
+_OSC_HS_1H                        000000F2
+_OSC_IRCIO67_1H                   000000F8
+_OSC_IRCIO7_1H                    000000F9
+_OSC_LP_1H                        000000F0
+_OSC_RCIO_1H                      000000F7
+_OSC_RC_1H                        000000F3
+_OSC_XT_1H                        000000F1
+_PBADEN_OFF_3H                    000000FD
+_PBADEN_ON_3H                     000000FF
+_PWRT_OFF_2L                      000000FF
+_PWRT_ON_2L                       000000FE
+_STVREN_OFF_4L                    000000FE
+_STVREN_ON_4L                     000000FF
+_WDTPS_1024_2H                    000000F5
+_WDTPS_128_2H                     000000EF
+_WDTPS_16384_2H                   000000FD
+_WDTPS_16_2H                      000000E9
+_WDTPS_1_2H                       000000E1
+_WDTPS_2048_2H                    000000F7
+_WDTPS_256_2H                     000000F1
+_WDTPS_2_2H                       000000E3
+_WDTPS_32768_2H                   000000FF
+_WDTPS_32_2H                      000000EB
+_WDTPS_4096_2H                    000000F9
+_WDTPS_4_2H                       000000E5
+_WDTPS_512_2H                     000000F3
+_WDTPS_64_2H                      000000ED
+_WDTPS_8192_2H                    000000FB
+_WDTPS_8_2H                       000000E7
+_WDT_OFF_2H                       000000FE
+_WDT_ON_2H                        000000FF
+_WRT0_OFF_6L                      000000FF
+_WRT0_ON_6L                       000000FE
+_WRT1_OFF_6L                      000000FF
+_WRT1_ON_6L                       000000FD
+_WRT2_OFF_6L                      000000FF
+_WRT2_ON_6L                       000000FB
+_WRT3_OFF_6L                      000000FF
+_WRT3_ON_6L                       000000F7
+_WRTB_OFF_6H                      000000FF
+_WRTB_ON_6H                       000000BF
+_WRTC_OFF_6H                      000000FF
+_WRTC_ON_6H                       000000DF
+_WRTD_OFF_6H                      000000FF
+_WRTD_ON_6H                       0000007F
+_XINST_OFF_4L                     000000BF
+_XINST_ON_4L                      000000FF
+__18F2680                         00000001
+__freelist                        00000000
+free                              00000000
+p                                 4
+q                                 6
+r                                 0
+MPASM  5.35                          FREE.ASM   8-13-2010  14:45:03         PAGE 57
+
+
+SYMBOL TABLE
+  LABEL                             VALUE 
+
+vTaskSuspendAll                   00000000
+xTaskResumeAll                    00000000
+xa630                             0000005C
+xa68e                             000000DA
+
+Errors   :     0
+Warnings :     0 reported,     0 suppressed
+Messages :     0 reported,     0 suppressed
+
+
