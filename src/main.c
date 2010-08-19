@@ -89,6 +89,7 @@ xComPortHandle xSerial = NULL;
 volatile xSemaphoreHandle xADCSem = NULL;
 volatile xQueueHandle qMsgs = NULL;
 volatile xQueueHandle qEEWrite = NULL;
+
 char initLCD( void );
 void init( void ) {
 	// Initialize clock
@@ -709,17 +710,16 @@ void tskUI( void *params ) {
 						uiState = 0x01;
 						break;
 				}
-				uiState = 0x01;
 				break;
 			case 0x04:
-				printf("\r\nget what? ");
+				printf("\r\nget what%s", uiINPUT);
 				while (!DataRdyUSART());
 				buf = (void *) &buffer;
 				*buf = getcUSART();
 				printf("%c", *buf);
 				if (*buf == 0x0D) {
 					*buf = 0x00;
-					
+					cmd.cmd = parse(&buffer);
 					buf = (void *) &buffer;
 					uiState = 0x05;
 				} else if (*buf == 0x09) {
@@ -731,15 +731,40 @@ void tskUI( void *params ) {
 					for (i = 0; i < uiBUFFER_SIZE; i++) {
 						buffer[i] = 0; // @todo clean this up
 					}
-					printf("\r\nInvalid command!\r\n");
-					uiState = 0x01;
+					printf("\r\nUninterpretable (too long)!\r\n");
 				} else {
 					buf++;
 				}
-				printf("value%s", uiINPUT);
 				while (!DataRdyUSART()); // wait for response
 				// @todo break out this routine
 				break;
+			case 0x05:
+				switch (cmd.cmd) {
+					case cmdVOLTS:
+						printf("\r\n\which cell%s", uiINPUT);
+						while (!DataRdyUSART());
+						buf = (void *) &buffer;
+						*buf = getcUSART();
+						printf("\r\n%f V\r\n", fVoltage[atoi(buffer)]);
+						break;
+					case cmdCURRENT:
+						printf("\r\n%f mA\r\n", fVoltage[atoi(buffer)]);
+						break;
+					case cmdTEMP:
+						printf("\r\n\which cell%s", uiINPUT);
+						while (!DataRdyUSART());
+						buf = (void *) &buffer;
+						*buf = getcUSART();
+						printf("\r\n%f %cC\r\n", fVoltage[atoi(buffer)], 0xf8);
+						break;
+					case cmdMSGS:
+						printf("\r\n%u\r\n", msgs);
+						break;	
+					default:
+						printf("\r\nUninterpretable!\r\n");
+						break;
+				}
+				break;	
 			default:
 				uiState = 0x01;
 				break;
@@ -785,16 +810,3 @@ void tskCheck( void *params ) {
 	}		
 }
 
-/*
-#pragma code low_vector=0x18
-void low_interrupt ( void ) {
-	_asm 
-		goto isr_low
-	_endasm
-}
-#pragma code
-
-#pragma interruptlow isr_low
-void isr_low ( void ) {
-	
-}*/
