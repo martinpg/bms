@@ -192,7 +192,7 @@ void main( void ) {
 			printf(".");
 		#endif
 	}
-	OpenADC(ADC_CONFIG, ADV_V
+	//OpenADC(ADC_CONFIG, ADV_V
 	if (ReadADC() > REF_LOW_LIMIT && ReadADC() < REF_HI_LIMIT) {
 		// Reference is good to go; use it.
 		ADC_MUX = ADC_VREF_EXT1;
@@ -224,7 +224,7 @@ void main( void ) {
 	xTaskCreate( tskCheck, ( const char * const ) "chk", configMINIMAL_STACK_SIZE, NULL, prioDEFAULT, &xCheck );
 	xTaskCreate( tskUI, ( const char * const ) "ui", configMINIMAL_STACK_SIZE, NULL, prioDEFAULT, &xUI );
 	#ifdef DEBUG_CONSOLE
-		printf("scheduler started!\r\n\r\n");
+		printf("scheduler started!\r\n");
 	#endif	
 	vTaskStartScheduler();
 	#ifdef
@@ -474,6 +474,10 @@ void printDump( void ) {
 	printf("msgs=%d\ti=%d\tj=%d\r\n");
 }
 
+void printMsgs( void ) {
+	printf("printMsgs unimplemented.\r\n");
+}
+
 void tskCheckVolts( void *params ) {
 	static unsigned char cell = 0;
 	static message msg;
@@ -582,6 +586,10 @@ unsigned char parse(char* s) {
 		return cmdSU;
 	} else if (strcmp(s, txtSU_OFF) == 0) {
 		return cmdSU_OFF;
+	} else if (strcmp(s, txtVOLTS) == 0) {
+		return cmdVOLTS;
+	} else if (strcmp(s, txtCURRENT) == 0) {
+		return cmdCURRENT;
 	}
 	return -1; // shouldn't get here
 }
@@ -613,7 +621,6 @@ void tskUI( void *params ) {
 		switch(uiState) {
 			case 0x00:
 				// wait for reception of anything
-				//xSerialGetChar( xSerial, buf, 10);
 				while (!DataRdyUSART());
 				*buf = getcUSART();
 				uiState |= (*buf != 0 && *buf != 0xff);
@@ -633,7 +640,11 @@ void tskUI( void *params ) {
 					cmd.cmd = parse(&buffer);
 					buf = (void *) &buffer;
 					uiState = 0x03;
+				} else if (*buf == 0x09) {
+					// backspace
+					printf(" %c", *buf); // erasure?
 				} else if ((int) buf - (int) &buffer >= uiBUFFER_SIZE) {
+					// buffer overflow; reset pointer and empty array
 					buf = (void *) &buffer;
 					for (i = 0; i < uiBUFFER_SIZE; i++) {
 						buffer[i] = 0; // @todo clean this up
@@ -645,7 +656,7 @@ void tskUI( void *params ) {
 				}
 				break;
 			case 0x03:
-				uiState = 0;
+				uiState = 0x01;
 				// process command
 				if ((cmd.cmd & uiSU_REQD) >> 4 & STATUS_REGbits.sSU) {
 					break;
@@ -657,6 +668,12 @@ void tskUI( void *params ) {
 						printDump();
 						break;
 					case cmdRCVMSGS:
+						printMsgs();
+						if (STATUS_REG & ALLMSGS == ALLMSGS) {
+							STATUS_REG &= ~ALLMSGS;
+						} else {
+							STATUS_REG |= ALLMSGS;
+						}
 						break;
 					case cmdCLOSE_RELAY:
 						closeRelay();
@@ -694,6 +711,35 @@ void tskUI( void *params ) {
 				}
 				uiState = 0x01;
 				break;
+			case 0x04:
+				printf("\r\nget what? ");
+				while (!DataRdyUSART());
+				buf = (void *) &buffer;
+				*buf = getcUSART();
+				printf("%c", *buf);
+				if (*buf == 0x0D) {
+					*buf = 0x00;
+					
+					buf = (void *) &buffer;
+					uiState = 0x05;
+				} else if (*buf == 0x09) {
+					// backspace
+					printf(" %c", *buf); // erasure?
+				} else if ((int) buf - (int) &buffer >= uiBUFFER_SIZE) {
+					// buffer overflow; reset pointer and empty array
+					buf = (void *) &buffer;
+					for (i = 0; i < uiBUFFER_SIZE; i++) {
+						buffer[i] = 0; // @todo clean this up
+					}
+					printf("\r\nInvalid command!\r\n");
+					uiState = 0x01;
+				} else {
+					buf++;
+				}
+				printf("value%s", uiINPUT);
+				while (!DataRdyUSART()); // wait for response
+				// @todo break out this routine
+				break;
 			default:
 				uiState = 0x01;
 				break;
@@ -703,6 +749,8 @@ void tskUI( void *params ) {
 
 void tskCheck( void *params ) {
 	message msg;
+	unsigned int fVal;
+	unsigned char suf;
 	#ifdef DEBUG_CONSOLE
 		printf("Starting Checking task...\r\n");
 	#endif
@@ -712,15 +760,23 @@ void tskCheck( void *params ) {
 			switch(msg.type) {
 				case msgVOLTS:
 					checkVoltage(voltage[msg.cell], msg.cell);
+					fVal = fVoltage[msg.cell];
+					suf = 'V';
 					break;
 				case msgTEMP:
 					checkTemp(temp[msg.cell]);
+					fVal = fTemp[msg.cell];
+					suf = 'C';
 					break;
 				case msgCURRENT:
 					checkCurrent(current);
+					suf = 'A';
 					break;
 				default:
 					break;
+			}
+			if (STATUS_REG & ALLMSGS == ALLMSGS) {				
+				printf("%u:%f%s(%#x), ", msg.cell, fVal, suf, msg.raw);
 			}
 		} else {
 			// @todo no messages in x time? bad sign. fail out
