@@ -13,16 +13,15 @@
 #define	VDD					5.0 // Volts
 #define VREF_DEFAULT		2.5 // Volts
 #define MAX_CELLS 			4
-#define MAX_TEMP_FAILS		2 // failures tolerated
-#define TEMP_CONFIG_REG		0x60
+#define TEMP_CONFIG_REG		0x60 // @todo do I use this?
 #define ADC_CONFIG			ADC_FOSC_8 & ADC_RIGHT_JUST & ADC_16_TAD
 #define ADC_VREF_DEFAULT	ADC_CH3 & ADC_INT_ON & ADC_REF_VDD_VSS
 #define ADC_VREF_EXT1		ADC_CH3 & ADC_INT_ON & ADC_REF_VREFPLUS_VSS
 #define ADC_VREF_EXT2		ADC_CH3 & ADC_INT_ON & ADC_REF_VREFPLUS_VREFMINUS
 #define ADC_CHMUX			ADC_CH0
-#define ADC_CHCURRENT		ADC_CH1
-#define ADC_MUX_DELAY		1
-#define SAMPLE_BUFFER		10
+#define ADC_CHCURRENT		ADC_CH1 // @todo update these
+#define ADC_MUX_DELAY		1 // @todo necessary
+#define SAMPLE_BUFFER		10 // @todo implement
 #define SERIAL_BUFFER		24
 #define CONFIG_VERSION		1
 
@@ -32,10 +31,10 @@
 #define prioCRITICAL		3
 #define prioDEFAULT			( prioMED )
 
-#define pinRELAY			PORTCbits.RC5
+#define pinRELAY			LATCbits.LATC5
 #define pinADDRESS0			PORTC
-#define pinLED0				PORTBbits.RB0
-#define pinLED1				PORTBbits.RB1
+#define pinLED0				LATBbits.LATB0
+#define pinLED1				LATBbits.LATB1
 
 #define relayCLOSED			1
 #define relayOPEN			0

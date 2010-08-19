@@ -1,3 +1,9 @@
+/*
+ * Status.h -Status header
+ */
+#ifndef STATUS_H
+#define STATUS_H
+ 
 // Status "register"
 // LSB 0 - Active (@todo high speed mode) (>1 mA)
 //     1 - Shutdown (active low @todo)
@@ -59,3 +65,5 @@ volatile struct {
 	unsigned CF:1;
 	unsigned :3;
 } ERROR_REGbits;
+
+#endif /* STATUS_H */

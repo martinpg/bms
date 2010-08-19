@@ -89,6 +89,7 @@ xComPortHandle xSerial = NULL;
 volatile xSemaphoreHandle xADCSem = NULL;
 volatile xQueueHandle qMsgs = NULL;
 volatile xQueueHandle qEEWrite = NULL;
+volatile xQueueHandle qSerialTx = NULL;
 
 char initLCD( void );
 void init( void ) {
@@ -101,7 +102,9 @@ void init( void ) {
 	
 	// Initialize queues
 	qMsgs = xQueueCreate(10, sizeof(struct message *));
+	qSerialTx = xQueueCreate(20, sizeof(unsigned char));
 	vQueueAddToRegistry(qMsgs, "msgs");
+	vQueueAddToRegistry(qSerialTx, "tx");
 	
 	// Initialize global variables
 	VRef = VDD;
@@ -587,10 +590,6 @@ unsigned char parse(char* s) {
 		return cmdSU;
 	} else if (strcmp(s, txtSU_OFF) == 0) {
 		return cmdSU_OFF;
-	} else if (strcmp(s, txtVOLTS) == 0) {
-		return cmdVOLTS;
-	} else if (strcmp(s, txtCURRENT) == 0) {
-		return cmdCURRENT;
 	}
 	return -1; // shouldn't get here
 }
@@ -598,18 +597,15 @@ unsigned char parse(char* s) {
 void tskUI( void *params ) {
 	static unsigned char *prompt;
 	unsigned char uiState = 0x00;
-	typedef struct {
-		unsigned char cmd;
-		unsigned op:1;
-		unsigned su:1;
-		unsigned :6;
-	} command;
-	command cmd = {NULL, NULL, NULL};
+	command cmd;
 	unsigned char buffer[uiBUFFER_SIZE];
 	unsigned char *buf;
 	#ifdef DEBUG_CONSOLE
 		printf("Starting UI...");
 	#endif
+	cmd.cmd = NULL;
+	cmd.ops = 0;
+	cmd.su = 0;
 	buf = (void *) &buffer;
 	prompt = (void *) &uiPROMPT;
 	for (i = 0; i < uiBUFFER_SIZE; i++) {
@@ -620,18 +616,18 @@ void tskUI( void *params ) {
 	#endif
 	while (1) {
 		switch(uiState) {
-			case 0x00:
+			case uiState_RESET:
 				// wait for reception of anything
 				while (!DataRdyUSART());
 				*buf = getcUSART();
-				uiState |= (*buf != 0 && *buf != 0xff);
+				uiState |= (*buf != 0 && *buf != 0xff); //0x01 if not garbage
 				break;
-			case 0x01:
+			case uiState_SYSTEM_PROMPT:
 				// display prompt
 				printf("\r\n%s", prompt);
 				uiState = 0x02;
 				break;
-			case 0x02:
+			case uiState_WAIT_FOR_CMD:
 				// wait / receive command
 				while (!DataRdyUSART());
 				*buf = getcUSART();
@@ -640,7 +636,7 @@ void tskUI( void *params ) {
 					*buf = 0x00;
 					cmd.cmd = parse(&buffer);
 					buf = (void *) &buffer;
-					uiState = 0x03;
+					//uiState = uiState_WAIT_FOR_CMD;
 				} else if (*buf == 0x09) {
 					// backspace
 					printf(" %c", *buf); // erasure?
@@ -650,16 +646,16 @@ void tskUI( void *params ) {
 					for (i = 0; i < uiBUFFER_SIZE; i++) {
 						buffer[i] = 0; // @todo clean this up
 					}
-					printf("\r\nInvalid command!\r\n");
-					uiState = 0x01;
+					printf("\r\nInvalid command (too long)!\r\n");
+					uiState = uiState_SYSTEM_PROMPT;
 				} else {
 					buf++;
 				}
 				break;
-			case 0x03:
+			case uiState_PROCESS_CMD:
 				uiState = 0x01;
-				// process command
-				if ((cmd.cmd & uiSU_REQD) >> 4 & STATUS_REGbits.sSU) {
+				// process base command
+				if ((cmd.su & uiSU_REQD) >> 4 & STATUS_REGbits.sSU) {
 					break;
 					cmd.cmd = cmdSU_OFF;
 					// @todo generate error
@@ -695,8 +691,15 @@ void tskUI( void *params ) {
 						clearGreenLED();
 						break;
 					case cmdGET_VALUE:
-						uiState = 0x04;
+						cmd.ops = 2;
+						printf("\r\nget what%s", uiINPUT);
+						uiState = uiState_WAIT_FOR_INPUT1;
 						break;
+					/*case cmdCONV:
+						cmd.ops = 2;
+						printf("\r\nconvert what%s", uiINPUT);
+						uiState = uiState_WAIT_FOR_INPUT2;
+						break;	*/
 					case cmdSU:
 						prompt = (void *) &uiPROMPT_SU;
 						STATUS_REGbits.sSU = 1;
@@ -707,12 +710,12 @@ void tskUI( void *params ) {
 						break;
 					default:
 						printf("Unknown command!\r\n");
-						uiState = 0x01;
+						uiState = uiState_SYSTEM_PROMPT;
 						break;
 				}
 				break;
-			case 0x04:
-				printf("\r\nget what%s", uiINPUT);
+			case uiState_WAIT_FOR_INPUT1:
+				// wait for response to get / conv what?
 				while (!DataRdyUSART());
 				buf = (void *) &buffer;
 				*buf = getcUSART();
@@ -721,7 +724,7 @@ void tskUI( void *params ) {
 					*buf = 0x00;
 					cmd.cmd = parse(&buffer);
 					buf = (void *) &buffer;
-					uiState = 0x05;
+					uiState = uiState_WAIT_FOR_INPUT2;
 				} else if (*buf == 0x09) {
 					// backspace
 					printf(" %c", *buf); // erasure?
@@ -735,12 +738,12 @@ void tskUI( void *params ) {
 				} else {
 					buf++;
 				}
-				while (!DataRdyUSART()); // wait for response
-				// @todo break out this routine
 				break;
-			case 0x05:
+			case uiState_WAIT_FOR_INPUT2:
+				// get / conv what?
 				switch (cmd.cmd) {
-					case cmdVOLTS:
+					/*case cmdVOLTS:
+						// @todo break this out too
 						printf("\r\n\which cell%s", uiINPUT);
 						while (!DataRdyUSART());
 						buf = (void *) &buffer;
@@ -759,14 +762,14 @@ void tskUI( void *params ) {
 						break;
 					case cmdMSGS:
 						printf("\r\n%u\r\n", msgs);
-						break;	
+						break;*/
 					default:
 						printf("\r\nUninterpretable!\r\n");
 						break;
 				}
 				break;	
 			default:
-				uiState = 0x01;
+				uiState = uiState_SYSTEM_PROMPT;
 				break;
 		}
 	}
