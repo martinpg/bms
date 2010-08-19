@@ -6,7 +6,7 @@
 //     4 - Fail
 //     5 - Superuser
 //     6 - RESERVED
-//     7 - RESERVED
+//     7 - Constant Output
 
 #define ACTIVE		0x01
 #define SHDN		0x02
@@ -14,6 +14,7 @@
 #define SLEEP		0x08
 #define FAIL		0x10
 #define SU			0x20
+#define ALLMSGS		0x40
 
 volatile unsigned char STATUS_REG;
 volatile struct {
