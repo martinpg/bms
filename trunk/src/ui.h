@@ -57,6 +57,9 @@ const unsigned char txtCONV_RAW[] = 	"convr";
 const unsigned char txtCONV_FLOAT[] =	"convf";
 const unsigned char txtRESET[] =		"reset";
 const unsigned char txtCRLF[] = 		"\r\n";
+const unsigned char uiPROMPT_SU[] = 	"% ";
+const unsigned char uiPROMPT[] = 		"> ";
+const unsigned char uiINPUT[] = 		"? ";
 
 // UI States
 #define uiState_RESET			0x00
