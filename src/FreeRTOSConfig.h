@@ -55,7 +55,6 @@
 #define FREERTOS_CONFIG_H
 
 #include <p18cxxx.h>
-
 /*-----------------------------------------------------------
  * Application specific definitions.
  *
@@ -81,9 +80,13 @@
 #define configUSE_16_BIT_TICKS			1
 #define configIDLE_SHOULD_YIELD			1
 
-//#define configUSE_MUTEXES				1
-#define configQUEUE_REGISTRY_SIZE		5
+extern volatile unsigned int TMR0;
 #define configGENERATE_RUN_TIME_STATS	0
+//#ifdef configGENERATE_RUN_TIME_STATS == 1
+#define portCONFIGURE_TIMER_FOR_RUN_TIME_STATS() vConfigureTimerForRunTimeStats()
+#define portGET_RUN_TIME_COUNTER_VALUE() vGetRunTime()
+#define configQUEUE_REGISTRY_SIZE		5
+//#endif
 
 /* Co-routine definitions. */
 #define configUSE_CO_ROUTINES 		0
