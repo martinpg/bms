@@ -29,6 +29,7 @@
 #include <string.h>
 //#include <xlcd.h>
 
+#include "xlcd.h"
 #include "status.h"
 #include "main.h"
 #include "ui.h"
