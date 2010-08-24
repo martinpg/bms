@@ -30,7 +30,8 @@ volatile struct {
 	unsigned sSLP:1;
 	unsigned sFAI:1;
 	unsigned sSU:1;
-	unsigned :2;
+	unsigned sMSG:1;
+	unsigned :1;
 } STATUS_REGbits;
 
 #define UNDERVOLT		0x0001	// Undervoltage

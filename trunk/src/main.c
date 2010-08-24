@@ -26,7 +26,7 @@
 //#include <math.h>
 #include <usart.h>
 #include <string.h>
-#include <xlcd.h>
+//#include <xlcd.h>
 
 #include "status.h"
 #include "main.h"
@@ -73,7 +73,6 @@ const unsigned char uiPROMPT_SU[] = "% ";
 const unsigned char uiPROMPT[] = "> ";
 const unsigned char uiINPUT[] = "? ";
 
-unsigned int i, j;
 volatile unsigned int msgs;
 
 // AFE and current calibration factors
@@ -87,12 +86,13 @@ xTaskHandle xTemp = NULL;
 xTaskHandle xUI = NULL;
 xComPortHandle xSerial = NULL;
 volatile xSemaphoreHandle xADCSem = NULL;
-volatile xQueueHandle qMsgs = NULL;
-volatile xQueueHandle qEEWrite = NULL;
-volatile xQueueHandle qSerialTx = NULL;
+volatile xQueueHandle qMsgs = NULL; // @todo put this in the correct thread
+volatile xQueueHandle qEEWrite = NULL; // @todo put this in the correct thread
+volatile xQueueHandle qSerialTx = NULL; // put this in the correct thread
+volatile xQueueHandle qCommands = NULL;
 
-char initLCD( void );
 void init( void ) {
+	unsigned char i = 0;
 	// Initialize clock
 	OSCCON |= 0xF0;
 	OSCTUNE |= 0x40; //enable pll for intosc
@@ -178,7 +178,7 @@ void init( void ) {
 void main( void ) {
 	init();
 	#ifdef DEBUG_CONSOLE
-		printf("Initialization...\r\n");
+		printf("\r\n\r\nInitialization...\r\n");
 	#endif
 	setRedLED();
 	
@@ -252,13 +252,14 @@ char initTemp( unsigned char address ) {
 	return retVal;
 }
 
-char initLCD( void ) {
+
+/*char initLCD( void ) {
 	char retVal = 0;
 	OpenXLCD( FOUR_BIT & LINES_5X7 );
 	while (!BusyXLCD());
 	putrsXLCD("TEST!");
 	return 0;
-}
+}*/
 
 signed int readTemp( unsigned char address ) {
 	unsigned int result = 0;
@@ -459,27 +460,23 @@ void eepromWrite( unsigned char address, unsigned char x ) {
 	}
 	EECON1bits.WREN = 0; // disable writes
 	INTCONbits.GIE = 0x01 & oldGIE;
-}
+	}
 
 void printDump( void ) {
 	unsigned char k;
-	printf("STATUS_REG=%#x\tERROR_REG=%#x\tEEPROM_OFFSET=%#x\r\n", STATUS_REG, ERROR_REG);
-	printf("VRef0=%f\tVRef=%f\r\n", VRef0, VRef);
-	printf("REF_LOW_LIM=%#x\tREF_HI_LIM=%#x\tREF0_LOW_LIM=%#x\tREF0_HI_LIM=%#x",
+	printf("STATUS_REG=%#0x0\tERROR_REG=%#0x0\tEEPROM_OFFSET=%#0x0\r\n", STATUS_REG, ERROR_REG);
+	printf("VRef0=%0.0f\tVRef=%0.0f\r\n", VRef0, VRef);
+	printf("REF_LOW_LIM=%#0x0\tREF_HI_LIM=%#0x0\r\nREF0_LOW_LIM=%#0x0\tREF0_HI_LIM=%#x\r\n",
 			REF_LOW_LIMIT, REF_HI_LIMIT, REF0_LOW_LIMIT, REF0_HI_LIMIT);
-	printf("ADC_MUX=%#x\tI_THR=%d\tDISCHG_LIM=%d\tCHG_LIM=%d\r\n", 
+	printf("ADC_MUX=%#0x0\tI_THR=%d\tDISCHG_LIM=%d\tCHG_LIM=%d\r\n", 
 			ADC_MUX, CURRENT_THRES, DISCHG_RATE_LIMIT, CHARGE_RATE_LIMIT);
-	printf("I=%d\tci=%f,%f\r\n", current, ci.g, ci.b);
+	printf("I=%d\tci=%0.0f,%0.0f\r\n", current, ci.g, ci.b);
 	for (k = 0; k < MAX_CELLS; k++) {
-		printf("cell[%u]: v=%f(%#x)\tT=%f(%#x)\t\UV_LIM=%u\tOV_LIM=%u\tchg=%d\tcv=%f,%f\r\n", 
+		printf("cell[%u]: v=%0.0f(%#x)\tT=%0.0f(%#x)\t\UV_LIM=%u\tOV_LIM=%u\tchg=%d\tcv=%0.0f,%0.0f\r\n", 
 			k, fVoltage[k], voltage[k], fTemp[k], temp[k],UNDERVOLT_LIMIT[k],
 			OVERVOLT_LIMIT[k], charge[k], cv[k].g, cv[k].b);
 	}
-	printf("msgs=%d\ti=%d\tj=%d\r\n");
-}
-
-void printMsgs( void ) {
-	printf("printMsgs unimplemented.\r\n");
+	printf("msgs=%u", msgs);
 }
 
 void tskCheckVolts( void *params ) {
@@ -567,110 +564,164 @@ void tskWriteEEPROM( void *params ) {
 	}
 }
 
-unsigned char parse(char* s) {
+void tskCheck( void *params ) {
+	message msg;
+	unsigned int fVal;
+	unsigned char suf;
+	#ifdef DEBUG_CONSOLE
+		printf("Starting Checking task...\r\n");
+	#endif
+	while (1) {
+		if (xQueueReceive(qMsgs, &msg, 100) == pdPASS) {
+			if (STATUS_REGbits.sMSG) {
+				command c;
+				c.su = 0;
+				c.ops = 0;
+				c.cmd = cmdPRINT_MSG;
+				xQueueSend(qCommands, &c, 0);
+			}
+			msgs++;
+			switch(msg.type) {
+				case msgVOLTS:
+					checkVoltage(voltage[msg.cell], msg.cell);
+					fVal = fVoltage[msg.cell];
+					suf = 'V';
+					break;
+				case msgTEMP:
+					checkTemp(temp[msg.cell]);
+					fVal = fTemp[msg.cell];
+					suf = 'C';
+					break;
+				case msgCURRENT:
+					checkCurrent(current);
+					suf = 'A';
+					break;
+				default:
+					break;
+			}
+		} else {
+			// @todo no messages in x time? bad sign. fail out
+		}
+		ClrWdt();
+	}		
+}
+
+static command* parseCmd( char* s ) {
+	static command parsedCmd;
+	parsedCmd.cmd = 0;
+	parsedCmd.ops = 0;
+	parsedCmd.su = 0;
 	if (strcmp(s, txtSTATUS) == 0) {
-		return cmdSTATUS;
+		// status
+		parsedCmd.cmd = cmdSTATUS;
 	} else if (strcmp(s, txtRCVMSGS) == 0) {
-		return cmdRCVMSGS;
+		parsedCmd.cmd = cmdRCVMSGS;
 	} else if (strcmp(s, txtCLOSE_RELAY) == 0) {
-		return cmdCLOSE_RELAY;
+		parsedCmd.cmd = cmdCLOSE_RELAY;
+		parsedCmd.su = TRUE;
 	} else if (strcmp(s, txtOPEN_RELAY) == 0) {
-		return cmdOPEN_RELAY;
+		parsedCmd.cmd = cmdOPEN_RELAY;
 	} else if (strcmp(s, txtRED_ON) == 0) {
-		return cmdRED_ON;
+		parsedCmd.cmd = cmdRED_ON;
 	} else if (strcmp(s, txtRED_OFF) == 0) {
-		return cmdRED_OFF;
+		parsedCmd.cmd = cmdRED_OFF;
 	} else if (strcmp(s, txtGREEN_ON) == 0) {
-		return cmdGREEN_ON;
+		parsedCmd.cmd = cmdGREEN_ON;
 	} else if (strcmp(s, txtGREEN_OFF) == 0) {
-		return cmdGREEN_OFF;
+		parsedCmd.cmd = cmdGREEN_OFF;
 	} else if (strcmp(s, txtGET_VALUE) == 0) {
-		return cmdGET_VALUE;
+		parsedCmd.cmd = cmdGET_VALUE;
+		parsedCmd.ops = 2;
+	} else if (strcmp(s, txtSET_VALUE) == 0) {
+		parsedCmd.cmd = cmdSET_VALUE;
+		parsedCmd.ops = 2;
+		parsedCmd.su = TRUE;
 	} else if (strcmp(s, txtSU) == 0) {
-		return cmdSU;
+		parsedCmd.cmd = cmdSU;
 	} else if (strcmp(s, txtSU_OFF) == 0) {
-		return cmdSU_OFF;
+		parsedCmd.cmd = cmdSU_OFF;
+		parsedCmd.su = TRUE;
+	} else if (strcmp(s, txtMSGS) == 0) {
+		parsedCmd.cmd = cmdPRINT_MSG;
+	} else if (strcmp(s, txtCONV_RAW) == 0) {
+		parsedCmd.cmd = cmdCONV_RAW;
+		parsedCmd.ops = 2;
+	} else if (strcmp(s, txtCONV_FLOAT) == 0) {
+		parsedCmd.cmd = cmdCONV_FLOAT;
+		parsedCmd.ops = 2;
+	} else if (strcmp(s, txtRESET) == 0) {
+		parsedCmd.cmd = cmdRESET;
+		parsedCmd.su = TRUE;
 	}
-	return -1; // shouldn't get here
+	return &parsedCmd;
+}
+
+unsigned char parseTlm( char* s ) {
+	if (strcmp(s, txtVOLTS) == 0) {
+		return tlmVOLTS;
+	} else if (strcmp(s, txtTEMP) == 0) {
+		return tlmTEMP;
+	} else if (strcmp(s, txtCURRENT) == 0) {
+		return tlmCURRENT;
+	}
+	return NULL;
 }
 
 void tskUI( void *params ) {
 	static unsigned char *prompt;
-	unsigned char uiState = 0x00;
-	command cmd;
+	unsigned char uiState = uiState_RESET;
+	command *cmd;
+	message msg;
 	unsigned char buffer[uiBUFFER_SIZE];
 	unsigned char *buf;
+	unsigned int i = 0;	
 	#ifdef DEBUG_CONSOLE
 		printf("Starting UI...");
 	#endif
-	cmd.cmd = NULL;
-	cmd.ops = 0;
-	cmd.su = 0;
 	buf = (void *) &buffer;
 	prompt = (void *) &uiPROMPT;
 	for (i = 0; i < uiBUFFER_SIZE; i++) {
-		buffer[i] = 0; // @todo lcean this up
+		buffer[i] = 0; // @todo clean this up
+	}
+	if (qCommands == NULL) {
+		qCommands = xQueueCreate(uiCOMMAND_QSIZE, sizeof(command));
+		vQueueAddToRegistry(qCommands, "cmd");
 	}
 	#ifdef DEBUG_CONSOLE
 		printf("done!\r\n");
 	#endif
 	while (1) {
-		switch(uiState) {
-			case uiState_RESET:
-				// wait for reception of anything
-				while (!DataRdyUSART());
-				*buf = getcUSART();
-				uiState |= (*buf != 0 && *buf != 0xff); //0x01 if not garbage
-				break;
-			case uiState_SYSTEM_PROMPT:
-				// display prompt
-				printf("\r\n%s", prompt);
-				uiState = 0x02;
-				break;
-			case uiState_WAIT_FOR_CMD:
-				// wait / receive command
-				while (!DataRdyUSART());
-				*buf = getcUSART();
-				printf("%c", *buf);
-				if (*buf == 0x0D) {
-					*buf = 0x00;
-					cmd.cmd = parse(&buffer);
-					buf = (void *) &buffer;
-					//uiState = uiState_WAIT_FOR_CMD;
-				} else if (*buf == 0x09) {
-					// backspace
-					printf(" %c", *buf); // erasure?
-				} else if ((int) buf - (int) &buffer >= uiBUFFER_SIZE) {
-					// buffer overflow; reset pointer and empty array
-					buf = (void *) &buffer;
-					for (i = 0; i < uiBUFFER_SIZE; i++) {
-						buffer[i] = 0; // @todo clean this up
-					}
-					printf("\r\nInvalid command (too long)!\r\n");
-					uiState = uiState_SYSTEM_PROMPT;
-				} else {
-					buf++;
-				}
-				break;
-			case uiState_PROCESS_CMD:
-				uiState = 0x01;
-				// process base command
-				if ((cmd.su & uiSU_REQD) >> 4 & STATUS_REGbits.sSU) {
-					break;
-					cmd.cmd = cmdSU_OFF;
-					// @todo generate error
-				}
-				switch(cmd.cmd) {
+		if (xQueueReceive(qCommands, cmd, 0) == pdPASS) {
+			if (cmd->su & !STATUS_REGbits.sSU) {
+				printf("su required");
+				uiState = uiState_SYSTEM_PROMPT;
+			} else {
+				switch(cmd->cmd) {
 					case cmdSTATUS:
 						printDump();
 						break;
 					case cmdRCVMSGS:
-						printMsgs();
-						if (STATUS_REG & ALLMSGS == ALLMSGS) {
-							STATUS_REG &= ~ALLMSGS;
-						} else {
-							STATUS_REG |= ALLMSGS;
+						STATUS_REGbits.sMSG = !STATUS_REGbits.sMSG;
+						break;
+					case cmdPRINT_MSG:
+						printf("%u - ", msgs);
+						if (cmd->ops == 1) {
+							printf("c%u @ ", msg.cell);
 						}
+						switch (msg.type) {
+							case msgVOLTS:
+								printf("%f V", fVoltage[msg.cell]);
+								break;
+							case msgCURRENT:
+								printf("%u mA", current);
+								break;
+							case msgTEMP:
+								printf("%f %cC", fTemp[msg.cell], 235);
+								break;
+							default:
+								break;		
+						}
+						printf(txtCRLF);
 						break;
 					case cmdCLOSE_RELAY:
 						closeRelay();
@@ -691,15 +742,50 @@ void tskUI( void *params ) {
 						clearGreenLED();
 						break;
 					case cmdGET_VALUE:
-						cmd.ops = 2;
-						printf("\r\nget what%s", uiINPUT);
-						uiState = uiState_WAIT_FOR_INPUT1;
+						switch (cmd->ops) {
+							case 2:
+								printf("\r\nget what%s", uiINPUT);
+								uiState = uiState_WAIT_FOR_INPUT1;
+								break;
+							case 1:
+								printf("\r\nfor which cell%s", uiINPUT);
+								uiState = uiState_WAIT_FOR_INPUT2;
+								break;
+							default:
+								uiState = uiState_RESET;
+								break;
+						}
 						break;
-					/*case cmdCONV:
-						cmd.ops = 2;
-						printf("\r\nconvert what%s", uiINPUT);
-						uiState = uiState_WAIT_FOR_INPUT2;
-						break;	*/
+					case cmdCONV_RAW:
+						switch (cmd->ops) {
+							case 2:
+								printf("\r\nconvert what%s", uiINPUT);
+								uiState = uiState_WAIT_FOR_INPUT1;
+								break;
+							case 1:
+								printf("\r\nfor which cell%s", uiINPUT);
+								uiState = uiState_WAIT_FOR_INPUT2;
+								break;
+							default:
+								uiState = uiState_RESET;
+								break;
+						}
+						break;
+					case cmdCONV_FLOAT:
+						switch (cmd->ops) {
+							case 2:
+								printf("\r\nconvert what%s", uiINPUT);
+								uiState = uiState_WAIT_FOR_INPUT1;
+								break;
+							case 1:
+								printf("\r\nfor which cell%s", uiINPUT);
+								uiState = uiState_WAIT_FOR_INPUT2;
+								break;
+							default:
+								uiState = uiState_RESET;
+								break;
+						}
+						break;
 					case cmdSU:
 						prompt = (void *) &uiPROMPT_SU;
 						STATUS_REGbits.sSU = 1;
@@ -709,107 +795,111 @@ void tskUI( void *params ) {
 						STATUS_REGbits.sSU = 0;
 						break;
 					default:
-						printf("Unknown command!\r\n");
+						printf("Unknown command!");
 						uiState = uiState_SYSTEM_PROMPT;
 						break;
 				}
-				break;
-			case uiState_WAIT_FOR_INPUT1:
-				// wait for response to get / conv what?
-				while (!DataRdyUSART());
-				buf = (void *) &buffer;
-				*buf = getcUSART();
-				printf("%c", *buf);
-				if (*buf == 0x0D) {
-					*buf = 0x00;
-					cmd.cmd = parse(&buffer);
-					buf = (void *) &buffer;
-					uiState = uiState_WAIT_FOR_INPUT2;
-				} else if (*buf == 0x09) {
-					// backspace
-					printf(" %c", *buf); // erasure?
-				} else if ((int) buf - (int) &buffer >= uiBUFFER_SIZE) {
-					// buffer overflow; reset pointer and empty array
-					buf = (void *) &buffer;
-					for (i = 0; i < uiBUFFER_SIZE; i++) {
-						buffer[i] = 0; // @todo clean this up
+			}
+		} else {
+			switch(uiState) {
+				case uiState_RESET:
+					// wait for reception of anything
+					while (!DataRdyUSART());
+					*buf = getcUSART();
+					uiState |= (*buf != 0 && *buf != 0xff); //0x01 if not garbage
+					break;
+				case uiState_SYSTEM_PROMPT:
+					// display prompt
+					printf("\r\n%s", prompt);
+					uiState = uiState_WAIT_FOR_CMD;
+					break;
+				case uiState_WAIT_FOR_CMD:
+					// wait / receive command
+					while (!DataRdyUSART());
+					*buf = getcUSART();
+					printf("%c", *buf);
+					if (*buf == 0x0D) {
+						*buf = 0x00;
+						cmd = parseCmd(&buffer);
+						if (cmd->cmd != 0)
+							while (xQueueSend(qCommands, cmd, 20) != pdPASS);
+						else if ((int) buf != (int) &buffer) 
+							printf("Unknown command!");
+						buf = (void *) &buffer;
+						uiState = uiState_SYSTEM_PROMPT;
+					} else if (*buf == 0x08) {
+						// backspace
+						printf(" %c", *buf); // erasure
+						*buf = 0x00; // erasure in buffer
+					} else if ((int) buf - (int) &buffer >= uiBUFFER_SIZE) {
+						// buffer overflow; reset pointer and empty array
+						buf = (void *) &buffer;
+						for (i = 0; i < uiBUFFER_SIZE; i++) {
+							buffer[i] = 0; // @todo clean this up
+						}
+						printf("\r\nInvalid command (too long)!\r\n");
+						uiState = uiState_SYSTEM_PROMPT;
+					} else {
+						buf++;
 					}
-					printf("\r\nUninterpretable (too long)!\r\n");
-				} else {
-					buf++;
-				}
-				break;
-			case uiState_WAIT_FOR_INPUT2:
-				// get / conv what?
-				switch (cmd.cmd) {
-					/*case cmdVOLTS:
-						// @todo break this out too
-						printf("\r\n\which cell%s", uiINPUT);
-						while (!DataRdyUSART());
+					break;			
+				case uiState_WAIT_FOR_INPUT1:
+					// wait for response to get / conv what?
+					while (!DataRdyUSART());
+					buf = (void *) &buffer;
+					*buf = getcUSART();
+					printf("%c", *buf);
+					if (*buf == 0x0D) {
+						*buf = 0x00;
+						*buf = parseTlm(&buffer);
+						switch (*buf) {
+							case tlmVOLTS:
+								msg.type = msgVOLTS;
+								cmd->ops--;
+								break;
+							case tlmCURRENT:
+								msg.type = msgCURRENT;
+								cmd->ops -= 2;
+								break;
+							case tlmTEMP:
+								msg.type = msgTEMP;
+								cmd->ops--;
+								break;
+							default:
+								break;
+						}
+						while (xQueueSend(qCommands, cmd, 20) != pdPASS);
 						buf = (void *) &buffer;
-						*buf = getcUSART();
-						printf("\r\n%f V\r\n", fVoltage[atoi(buffer)]);
-						break;
-					case cmdCURRENT:
-						printf("\r\n%f mA\r\n", fVoltage[atoi(buffer)]);
-						break;
-					case cmdTEMP:
-						printf("\r\n\which cell%s", uiINPUT);
-						while (!DataRdyUSART());
+						uiState = uiState_WAIT_FOR_INPUT2;
+					} else if (*buf == 0x08) {
+						// backspace
+						printf(" %c", *buf); // erasure?
+					} else if ((int) buf - (int) &buffer >= uiBUFFER_SIZE) {
+						// buffer overflow; reset pointer and empty array
 						buf = (void *) &buffer;
-						*buf = getcUSART();
-						printf("\r\n%f %cC\r\n", fVoltage[atoi(buffer)], 0xf8);
-						break;
-					case cmdMSGS:
-						printf("\r\n%u\r\n", msgs);
-						break;*/
-					default:
-						printf("\r\nUninterpretable!\r\n");
-						break;
-				}
-				break;	
-			default:
-				uiState = uiState_SYSTEM_PROMPT;
-				break;
+						for (i = 0; i < uiBUFFER_SIZE; i++) {
+							buffer[i] = 0; // @todo clean this up
+						}
+						printf("\r\nUninterpretable (too long)!\r\n");
+					} else {
+						buf++;
+					}
+					break;
+				case uiState_WAIT_FOR_INPUT2:
+					// get / conv what?
+					while (!DataRdyUSART());
+					buf = (void *) &buffer;
+					*buf = getcUSART();
+					if (atoi(buf) < MAX_CELLS) {
+						msg.cell = atoi(buf);
+					} else {
+						printf("\r\nout of range!\r\n");
+						uiState = uiState_SYSTEM_PROMPT;
+					}
+				default:
+					uiState = uiState_RESET;
+					break;
+			}
 		}
 	}
 }
-
-void tskCheck( void *params ) {
-	message msg;
-	unsigned int fVal;
-	unsigned char suf;
-	#ifdef DEBUG_CONSOLE
-		printf("Starting Checking task...\r\n");
-	#endif
-	while (1) {
-		if (xQueueReceive(qMsgs, &msg, 100) == pdPASS) {
-			msgs++;
-			switch(msg.type) {
-				case msgVOLTS:
-					checkVoltage(voltage[msg.cell], msg.cell);
-					fVal = fVoltage[msg.cell];
-					suf = 'V';
-					break;
-				case msgTEMP:
-					checkTemp(temp[msg.cell]);
-					fVal = fTemp[msg.cell];
-					suf = 'C';
-					break;
-				case msgCURRENT:
-					checkCurrent(current);
-					suf = 'A';
-					break;
-				default:
-					break;
-			}
-			if (STATUS_REG & ALLMSGS == ALLMSGS) {				
-				printf("%u:%f%s(%#x), ", msg.cell, fVal, suf, msg.raw);
-			}
-		} else {
-			// @todo no messages in x time? bad sign. fail out
-		}
-		ClrWdt();
-	}		
-}
-
