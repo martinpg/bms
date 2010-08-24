@@ -4,7 +4,15 @@
  * Author Kevin McHale (k.mchale@me.com)
  *
  */
- 
+#pragma config OSC = IRCIO67 // internal oscillator (8 MHz)
+#pragma config FCMEN = OFF
+#pragma config IESO = OFF
+//#pragma config MCLRE = OFF // MCLR disabled
+#pragma config PBADEN = OFF
+#pragma config LVP = OFF
+#pragma config XINST = ON // extended mode
+
+
 #define DEBUG_CONSOLE	// comment out this line to remove console debugging messages
  
 #define TRUE	1

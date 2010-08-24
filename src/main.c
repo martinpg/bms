@@ -23,6 +23,7 @@
 #include <delays.h>
 #include <i2c.h>
 #include <stdio.h>
+//#include <timers.h> //@todo implement for runtime
 //#include <math.h>
 #include <usart.h>
 #include <string.h>
@@ -37,14 +38,6 @@
 #include "task.h"
 #include "semphr.h"
 #include "serial.h"
-
-#pragma config OSC = IRCIO67 // internal oscillator
-#pragma config FCMEN = OFF
-#pragma config IESO = OFF
-//#pragma config MCLRE = OFF // MCLR disabled
-#pragma config PBADEN = OFF
-#pragma config LVP = OFF
-#pragma config XINST = ON // extended mode
 
 float VRef;
 float VRef0;
@@ -69,9 +62,6 @@ unsigned int REF_LOW_LIMIT; // Reference too low (mV): ~3247 mV
 unsigned int REF_HI_LIMIT; // Reference too high (mV): ~3349 mV
 unsigned int REF0_LOW_LIMIT;
 unsigned int REF0_HI_LIMIT;
-const unsigned char uiPROMPT_SU[] = "% ";
-const unsigned char uiPROMPT[] = "> ";
-const unsigned char uiINPUT[] = "? ";
 
 volatile unsigned int msgs;
 
@@ -252,6 +242,17 @@ char initTemp( unsigned char address ) {
 	return retVal;
 }
 
+void vConfigureTimerForRunTimeStats( void ) {
+	T0CON = 0b00000111;
+	TMR0L = 0;
+	TMR0H = 0;
+	T0CONbits.TMR0ON = TRUE;
+	//( configCPU_CLOCK_HZ / 10000UL) - 1UL;
+}
+
+void vGetRunTime( void ) {
+	return TMR0;
+}
 
 /*char initLCD( void ) {
 	char retVal = 0;
