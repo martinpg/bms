@@ -12,7 +12,6 @@
 #pragma config LVP = OFF
 #pragma config XINST = ON // extended mode
 
-
 #define DEBUG_CONSOLE	// comment out this line to remove console debugging messages
  
 #define TRUE	1
@@ -55,6 +54,8 @@
 #define ADC_CHMUX			ADC_CH0
 #define ADC_CHCURRENT		ADC_CH1 // @todo update these
 
+#define LED_FUNCTION
+#define	LED_
 
 typedef struct {
 	float g;

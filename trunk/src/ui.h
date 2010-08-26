@@ -1,8 +1,8 @@
+#ifndef __UI_H
+#define __UI_H
 /*
  * UI.h - User Interface header
  */
-#ifndef UI_H
-#define UI_H
 
 typedef struct {
 	unsigned cmd:4;
@@ -37,30 +37,6 @@ typedef struct {
 #define tlmTEMP			'T'
 #define tlmCURRENT		'I'
 
-const unsigned char txtSTATUS[] = 		"status";
-const unsigned char txtRCVMSGS[] =		"rmsgs";
-const unsigned char txtCLOSE_RELAY[] =	"on";
-const unsigned char txtOPEN_RELAY[] =	"off";
-const unsigned char txtRED_ON[] =		"r on";
-const unsigned char txtRED_OFF[] =		"r off";
-const unsigned char txtGREEN_ON[] =		"g on";
-const unsigned char txtGREEN_OFF[] =	"g off";
-const unsigned char txtGET_VALUE[] =	"get";
-const unsigned char txtSET_VALUE[] =	"set";
-const unsigned char txtSU[] =			"su";
-const unsigned char txtSU_OFF[] =		"nosu";
-const unsigned char txtVOLTS[] = 		"volts";
-const unsigned char txtCURRENT[] =		"current";
-const unsigned char txtTEMP[] =			"temp";
-const unsigned char txtMSGS[] =			"msg";
-const unsigned char txtCONV_RAW[] = 	"convr";
-const unsigned char txtCONV_FLOAT[] =	"convf";
-const unsigned char txtRESET[] =		"reset";
-const unsigned char txtCRLF[] = 		"\r\n";
-const unsigned char uiPROMPT_SU[] = 	"% ";
-const unsigned char uiPROMPT[] = 		"> ";
-const unsigned char uiINPUT[] = 		"? ";
-
 // UI States
 #define uiState_RESET			0x00
 #define uiState_SYSTEM_PROMPT	0x01
@@ -69,4 +45,7 @@ const unsigned char uiINPUT[] = 		"? ";
 #define uiState_WAIT_FOR_INPUT1	0x03
 #define uiState_WAIT_FOR_INPUT2 0x04
 
-#endif /* UI_H */
+unsigned char parseTlm( char* s );
+command* parseCmd( char* s );
+
+#endif /* __UI_H */

@@ -80,7 +80,6 @@
 #define configUSE_16_BIT_TICKS			1
 #define configIDLE_SHOULD_YIELD			1
 
-extern volatile unsigned int TMR0;
 #define configGENERATE_RUN_TIME_STATS	0
 //#ifdef configGENERATE_RUN_TIME_STATS == 1
 #define portCONFIGURE_TIMER_FOR_RUN_TIME_STATS() vConfigureTimerForRunTimeStats()
