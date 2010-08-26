@@ -1966,10 +1966,10 @@ tskTCB *pxNewTCB;
 	unsigned portSHORT usStackRemaining;
 
 		/* Write the details of all the TCB's in pxList into the buffer. */
-		//listGET_OWNER_OF_NEXT_ENTRY( pxFirstTCB, pxList );
+		listGET_OWNER_OF_NEXT_ENTRY( pxFirstTCB, pxList );
 		do
 		{
-			//listGET_OWNER_OF_NEXT_ENTRY( pxNextTCB, pxList );
+			listGET_OWNER_OF_NEXT_ENTRY( pxNextTCB, pxList );
 			usStackRemaining = usTaskCheckFreeStackSpace( ( unsigned portCHAR * ) pxNextTCB->pxStack );
 			sprintf( pcStatusString, ( portCHAR * ) "%s\t\t%c\t%u\t%u\t%u\r\n", pxNextTCB->pcTaskName, cStatus, ( unsigned int ) pxNextTCB->uxPriority, usStackRemaining, ( unsigned int ) pxNextTCB->uxTCBNumber );
 			strcat( ( portCHAR * ) pcWriteBuffer, ( portCHAR * ) pcStatusString );
