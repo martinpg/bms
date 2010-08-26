@@ -40,6 +40,11 @@
 #include "semphr.h"
 #include "serial.h"
 
+const unsigned char uiINPUT = 			"? ";
+const unsigned char uiPROMPT_SU = 		"% ";
+const unsigned char uiPROMPT = 			"> ";
+const unsigned char txtCRLF = 			"\r\n";
+
 float VRef;
 float VRef0;
 volatile unsigned char EEPROM_OFFSET;
@@ -251,8 +256,8 @@ void vConfigureTimerForRunTimeStats( void ) {
 	//( configCPU_CLOCK_HZ / 10000UL) - 1UL;
 }
 
-void vGetRunTime( void ) {
-	return TMR0;
+unsigned int vGetRunTime( void ) {
+	return ((int) TMR0H << 8) | (int) TMR0L;
 }
 
 /*char initLCD( void ) {
@@ -606,67 +611,6 @@ void tskCheck( void *params ) {
 		}
 		ClrWdt();
 	}		
-}
-
-static command* parseCmd( char* s ) {
-	static command parsedCmd;
-	parsedCmd.cmd = 0;
-	parsedCmd.ops = 0;
-	parsedCmd.su = 0;
-	if (strcmp(s, txtSTATUS) == 0) {
-		// status
-		parsedCmd.cmd = cmdSTATUS;
-	} else if (strcmp(s, txtRCVMSGS) == 0) {
-		parsedCmd.cmd = cmdRCVMSGS;
-	} else if (strcmp(s, txtCLOSE_RELAY) == 0) {
-		parsedCmd.cmd = cmdCLOSE_RELAY;
-		parsedCmd.su = TRUE;
-	} else if (strcmp(s, txtOPEN_RELAY) == 0) {
-		parsedCmd.cmd = cmdOPEN_RELAY;
-	} else if (strcmp(s, txtRED_ON) == 0) {
-		parsedCmd.cmd = cmdRED_ON;
-	} else if (strcmp(s, txtRED_OFF) == 0) {
-		parsedCmd.cmd = cmdRED_OFF;
-	} else if (strcmp(s, txtGREEN_ON) == 0) {
-		parsedCmd.cmd = cmdGREEN_ON;
-	} else if (strcmp(s, txtGREEN_OFF) == 0) {
-		parsedCmd.cmd = cmdGREEN_OFF;
-	} else if (strcmp(s, txtGET_VALUE) == 0) {
-		parsedCmd.cmd = cmdGET_VALUE;
-		parsedCmd.ops = 2;
-	} else if (strcmp(s, txtSET_VALUE) == 0) {
-		parsedCmd.cmd = cmdSET_VALUE;
-		parsedCmd.ops = 2;
-		parsedCmd.su = TRUE;
-	} else if (strcmp(s, txtSU) == 0) {
-		parsedCmd.cmd = cmdSU;
-	} else if (strcmp(s, txtSU_OFF) == 0) {
-		parsedCmd.cmd = cmdSU_OFF;
-		parsedCmd.su = TRUE;
-	} else if (strcmp(s, txtMSGS) == 0) {
-		parsedCmd.cmd = cmdPRINT_MSG;
-	} else if (strcmp(s, txtCONV_RAW) == 0) {
-		parsedCmd.cmd = cmdCONV_RAW;
-		parsedCmd.ops = 2;
-	} else if (strcmp(s, txtCONV_FLOAT) == 0) {
-		parsedCmd.cmd = cmdCONV_FLOAT;
-		parsedCmd.ops = 2;
-	} else if (strcmp(s, txtRESET) == 0) {
-		parsedCmd.cmd = cmdRESET;
-		parsedCmd.su = TRUE;
-	}
-	return &parsedCmd;
-}
-
-unsigned char parseTlm( char* s ) {
-	if (strcmp(s, txtVOLTS) == 0) {
-		return tlmVOLTS;
-	} else if (strcmp(s, txtTEMP) == 0) {
-		return tlmTEMP;
-	} else if (strcmp(s, txtCURRENT) == 0) {
-		return tlmCURRENT;
-	}
-	return NULL;
 }
 
 void tskUI( void *params ) {
