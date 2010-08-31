@@ -350,23 +350,17 @@ void checkTemp( signed int x ) {
 }
 
 void openRelay( void ) {
-	`	//_asm BCF PORTB, 0, 0 _endasm	
-	//PORTC &= 0%11011111;
-	//PORTCbits.RC5 = 0;
-	pinRELAY = relayOPEN;
+`	latRELAY = relayOPEN;
 }
 
 void closeRelay( void ) {
-	//_asm BSF PORTB, 0, 0 _endasm	
-	//PORTC |= 0%00100000;
-	//PORTCbits.RC5 = 1;
-	pinRELAY = relayCLOSED;
+	latRELAY = relayCLOSED;
 }
 
 void setAddress( unsigned char address ) {
 	if (address < MAX_CELLS) {
-		pinADDRESS0 = pinADDRESS0 & 0x07 | address;
-		//PORTC = (PORTC & 0x07) | address;
+		pinMUX_ADDR0 |= (address & 0x07);
+		// @todo recheck this line
 	} else {
 		setAddress(0);
 		// @todo shouldn't get here (improper call), generate error?
@@ -374,41 +368,27 @@ void setAddress( unsigned char address ) {
 }
 
 void setGreenLED() {
-	//PORTB |= 0x01;
-	pinLED0 = ledON;
+	latLED0 = ledON;
 }
 
 void setRedLED() {
-	//PORTB |= 0x02;
-	pinLED1 = ledON;
+	latLED1 = ledON;
 }
 
-void clearGreenLED() {	
-	//PORTB &= 0xFE;
-	pinLED0 = ledOFF;
+void clearGreenLED() {
+	latLED0 = ledOFF;
 }
 
 void clearRedLED() {
-	//PORTB &= 0xFD;
-	pinLED1 = ledOFF;
+	latLED1 = ledOFF;
 }
 
 void toggleGreenLED() {
-	pinLED1 = ~pinLED1;
-	/*if (PORTB & 0x01) {
-		clearGreenLED();	
-	} else {
-		setGreenLED();
-	}*/
+	latLED1 = !latLED1;
 }
 
 void toggleRedLED() {
-	/*if ((PORTB & 0x02) >> 1) {
-		clearRedLED();
-	} else {
-		setRedLED();
-	}*/
-	pinLED0 = !pinLED0;
+	latLED0 = !latLED0;
 }
 
 float conv( float x, cal c ) {
