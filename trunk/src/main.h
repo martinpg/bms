@@ -39,11 +39,22 @@
 #define relayCLOSED			1
 #define relayOPEN			0
 #define ledON				1
-#define ledOFF				0
-#define pinRELAY			LATCbits.LATC5
-#define pinADDRESS0			PORTC
-#define pinLED0				LATBbits.LATB0
-#define pinLED1				LATBbits.LATB1
+#define ledOFF				0 
+#define tris_INPUT			1
+#define tris_OUTPUT			0
+#define trisMUX				TRISAbits.TRISA0
+#define trisCURRENT			TRISAbits.TRISA1
+#define trisVREF			TRISAbits.TRISA3
+#define trisRELAY			TRISCbits.TRIS5
+#define latRELAY			LATCbits.LATC5
+#define pinMUX_ADDR0		PORTC
+#define trisMUX_ADDR0		TRISC
+#define trisLED0			TRISBbits.TRISB0
+#define latLED0				LATBbits.LATB0
+#define trisLED1			TRISBbits.TRISB1
+#define latLED1				LATBbits.LATB1
+#define trisSERIAL_TX		TRISCbits.TRISC6
+#define trisSERIAL_RX		TRISCbits.TRISC7
 #define ADC_BITS			1024 // 10 bits
 #define	VDD					5.0 // Volts
 #define VREF_DEFAULT		2.5 // Volts
@@ -55,7 +66,6 @@
 #define ADC_CHCURRENT		ADC_CH1 // @todo update these
 
 #define LED_FUNCTION
-#define	LED_
 
 typedef struct {
 	float g;
