@@ -29,9 +29,9 @@
 #include <string.h>
 //#include <xlcd.h>
 
+#include "main.h"
 #include "xlcd.h"
 #include "status.h"
-#include "main.h"
 #include "ui.h"
 
 #include "FreeRTOSConfig.h"
@@ -114,8 +114,8 @@ void init( void ) {
 	DISCHG_RATE_LIMIT = 3000; // mA
 	CHARGE_RATE_LIMIT = 6000; // mA
 	CURRENT_THRES = 20; // mA
-	TEMP_DISCHG_LIMIT = (int) 50 << 8;
-	TEMP_CHARGE_LIMIT = (int) 35 << 8;
+	TEMP_DISCHG_LIMIT = (int) 50 << 1;
+	TEMP_CHARGE_LIMIT = (int) 35 << 1;
 	REF_LOW_LIMIT = floatToInt(2.45); // V
 	REF_HI_LIMIT = floatToInt(2.55); // V
 	REF0_LOW_LIMIT = 0;
@@ -123,6 +123,8 @@ void init( void ) {
 	for (i = 0; i < MAX_CELLS; i++) {
 		// default values (3.7V, 25C)
 		//voltage[i] = floatToInt(3.7);
+		cv[i].g = 1.0f;
+		cv[i].b = VRef0;
 		voltage[i] = 0;
 		fVoltage[i] = 0.0;
 		temp[i] = 25 << 1;
@@ -132,15 +134,20 @@ void init( void ) {
 	}
 	current = 0;
 	msgs = 0;
+
+	// Set up digital tristate buffers on I/O ports
+	setupMUXInput();
+	setupCurrentInput();
+	setupVRefInput();
 	
-	// Set up digital I/O ports
-	
+	setupLEDOutputs();
+	setupRelayOutput();
 	// 		PORTA:	0 - MUX Output
 	//				1 - Current Sensor Output
 	//				3 - Voltage Reference (+3.3V)
 	//				2,4,5 - N.C.
 	//				6,7 - Clock
-	TRISA = 0xCB;
+	//TRISA = 0xCB;
 	
 	//		PORTB:	0 - LED0
 	//				1 - LED1
@@ -150,17 +157,19 @@ void init( void ) {
 	//				5 - LCD DB5
 	//				6 - LCD DB6
 	//				7 - LCD DB7
-	TRISB = 0x08;
+	//TRISB = 0x08;
 	
 	//		PORTC:	0 - Address bit 0
 	//				1 - Address bit 1
 	//				2 - Address bit 2
-	//				3 - I2C SCL clocknnn
+	//				3 - I2C SCL clock
 	//				4 - I2C SDA data
 	//				5 - Relay Enable (active high)
 	//				6 - Serial TX
 	//				7 - Serial RX
-	TRISC = 0x98;
+	//TRISC = 0x98;
+	
+	// @todo ensure I2C and serial is set up by module
 	
 	// Set up interrupts
 	//INTCON = 0x04; // Disable global interrupt, enables peripheral interrupt
@@ -169,6 +178,35 @@ void init( void ) {
 	OpenUSART(USART_TX_INT_OFF & USART_RX_INT_ON & USART_ASYNCH_MODE & USART_EIGHT_BIT & USART_CONT_RX & USART_BRGH_HIGH, 0x67);
 	//xSerial = xSerialPortInitMinimal(38400, (portBASE_TYPE)80);
 	stdout = _H_USART;
+}
+
+void setupMUXInput( void ) {
+	// @todo fix this hack
+	unsigned char i;
+	for (i = 0; i < MAX_CELLS; i++) {
+		#if tris_INPUT == 1
+			trisMUX_ADDR0 |= tris_INPUT << i;
+		#else
+			trisMUX_ADDR0 &= !(!tris_INPUT << i);
+		#endif
+	} 
+}
+
+void setupCurrentInput( void ) {
+	trisCURRENT = tris_INPUT;
+}
+
+void setupVRefInput( void ) {
+	trisVREF = tris_INPUT;
+}
+
+void setupLEDOutputs( void ) {
+	trisLED0 = tris_OUTPUT;
+	trisLED1 = tris_OUTPUT;
+}
+
+void setupRelayOutput( void ) {
+	trisRELAY = tris_OUTPUT;
 }
 
 void main( void ) {
@@ -258,6 +296,27 @@ void vConfigureTimerForRunTimeStats( void ) {
 
 unsigned int vGetRunTime( void ) {
 	return ((int) TMR0H << 8) | (int) TMR0L;
+}
+
+unsigned char checkConversions( void ) {
+	unsigned char i;
+	if (floatToInt(intToFloat(43, 0)) != 43) {
+		return -1;
+	}
+	if (intToFloat(floatToInt(3.712), 0) != 3.712) {
+		return -2;
+	}
+	for (i = 0; i < MAX_CELLS; i++) {
+		if (cv[i].g == 0) {
+			return -3;
+		}
+		// @todo implement
+		// check this (conv(0.1432, cv[i])
+	}
+	if (ci.g == 0) {
+		return -4;
+	}
+	return 0;
 }
 
 /*char initLCD( void ) {
@@ -720,6 +779,9 @@ void tskUI( void *params ) {
 						prompt = (void *) &uiPROMPT;
 						STATUS_REGbits.sSU = 0;
 						break;
+					case cmdPRINT_MSG_LCD:
+						// @todo implement
+						break;	
 					default:
 						printf("Unknown command!");
 						uiState = uiState_SYSTEM_PROMPT;
