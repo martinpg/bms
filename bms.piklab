@@ -3,21 +3,49 @@
   <general>
     <device>18F2680</device>
     <tool>c18</tool>
-    <programmer>custom</programmer>
+    <programmer>gpsim</programmer>
     <files>
-      <item>main.h</item>
-      <item>18f2620_e_FreeRTOS.lkr</item>
-      <item>18f2680_g_rtos.lkr</item>
-      <item>FreeRTOSConfig.h</item>
-      <item>main.c</item>
-      <item>status.h</item>
-      <item>ui.c</item>
-      <item>ui.h</item>
+      <item>src/main.c</item>
+      <item>src/main.h</item>
+      <item>src/status.h</item>
+      <item>src/ui.c</item>
+      <item>src/ui.h</item>
+      <item>src/h/pconfig.h</item>
     </files>
-    <opened_files>
-      <item>main.h</item>
-      <item>main.c</item>
-    </opened_files>
+    <description></description>
+    <version>0.1</version>
+    <output_type>executable</output_type>
   </general>
   <editors/>
+  <compiler>
+    <has_custom_arguments>false</has_custom_arguments>
+    <custom_arguments>
+      <item>-I$(SRCPATH)</item>
+      <item>-I/home/yoshi/MCC18/h/</item>
+      <item>-p</item>
+      <item>%DEVICE</item>
+      <item>-fo=%OBJECT</item>
+      <item>%I</item>
+    </custom_arguments>
+    <includes>
+      <item>$(SRCPATH)</item>
+    </includes>
+    <custom_options></custom_options>
+    <warning_level>0</warning_level>
+  </compiler>
+  <linker>
+    <has_custom_arguments>false</has_custom_arguments>
+    <custom_arguments>
+      <item>/k%LKR_PATH</item>
+      <item>%LKR_NAME</item>
+      <item>/l/home/yoshi/MCC18/lib/</item>
+      <item>/o%COFF</item>
+      <item>/m%MAP</item>
+      <item>%OBJS</item>
+      <item>%LIBS</item>
+    </custom_arguments>
+    <custom_options></custom_options>
+    <custom_libraries></custom_libraries>
+    <format>inhx32</format>
+  </linker>
 </piklab>

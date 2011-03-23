@@ -27,14 +27,10 @@
 //#include <math.h>
 #include <usart.h>
 #include <string.h>
-//#include <xlcd.h>
 
 #include "main.h"
-#include "xlcd.h"
 #include "status.h"
 #include "ui.h"
-
-#include "serial.h"
 
 const unsigned char uiINPUT = 			"? ";
 const unsigned char uiPROMPT_SU = 		"% ";
@@ -66,6 +62,22 @@ unsigned int REF0_LOW_LIMIT;
 unsigned int REF0_HI_LIMIT;
 
 volatile unsigned int msgs;
+
+typedef struct {
+        float g;
+        float b;
+} cal;
+
+typedef struct {
+        unsigned char type;
+        unsigned int raw;
+        unsigned char cell;
+} message;
+
+typedef struct {
+        unsigned char address;
+        unsigned int data;
+} eeWord;
 
 // AFE and current calibration factors
 cal cv[MAX_CELLS];
@@ -492,24 +504,20 @@ void tskCheckVolts( void *params ) {
 	#endif
 	msg.type = msgVOLTS;
 	while (1) {
-		if (xSemaphoreTake(xADCSem, 0) == pdTRUE) {
-			SetChanADC(ADC_CHMUX);
-			Delay10TCYx(ADC_MUX_DELAY); // @todo neessary?
-			ConvertADC();
-			taskYIELD();
-			while (BusyADC()); // @todo don't block
-			voltage[cell] = ReadADC();
-			xSemaphoreGive(xADCSem);
-			msg.raw = voltage[cell];
-			fVoltage[cell] = conv(intToFloat(voltage[cell], 0), cv[cell]);
-			if (cell < MAX_CELLS) {
-				cell++;
-			} else {
-				cell = 0;
-			}
-			setAddress(cell);
-			xQueueSend(qMsgs, (void *) &msg, (portTickType) 10);
+		SetChanADC(ADC_CHMUX);
+		Delay10TCYx(ADC_MUX_DELAY); // @todo neessary?
+		ConvertADC();
+		taskYIELD();
+		while (BusyADC()); // @todo don't block
+		voltage[cell] = ReadADC();
+		msg.raw = voltage[cell];
+		fVoltage[cell] = conv(intToFloat(voltage[cell], 0), cv[cell]);
+		if (cell < MAX_CELLS) {
+			cell++;
+		} else {
+			cell = 0;
 		}
+		setAddress(cell);
 	}
 }
 
@@ -525,7 +533,6 @@ void tskCheckTemps( void *params ) {
 		fTemp[cell] = ((float) temp[cell]) / 2;
 		msg.cell = cell;
 		msg.raw = temp[cell];
-		xQueueSend(qMsgs, (void *) &msg, (portTickType) 10);
 		if (cell < MAX_CELLS) {
 			cell++;
 		} else {
@@ -540,19 +547,15 @@ void tskCheckCurrent( void *params ) {
 	#endif
 	msg.type = msgCURRENT;
 	while (1) {
-		if (xSemaphoreTake(xADCSem, 0) == pdTRUE) {
-			SetChanADC(ADC_CHCURRENT);
-			Delay10TCYx(ADC_MUX_DELAY); // @todo necessary?
-			ConvertADC();
-			taskYIELD();
-			while(BusyADC()); // @todo don't block
-			current = ReadADC();
-			xSemaphoreGive(xADCSem);
-			current *= ci.g;
-			current += ci.b;
-			msg.raw = current;
-			xQueueSend(qMsgs, (void *) &msg, (portTickType) 10);
-		}
+		SetChanADC(ADC_CHCURRENT);
+		Delay10TCYx(ADC_MUX_DELAY); // @todo necessary?
+		ConvertADC();
+		taskYIELD();
+		while(BusyADC()); // @todo don't block
+		current = ReadADC();
+		current *= ci.g;
+		current += ci.b;
+		msg.raw = current;
 	}
 }
 
@@ -560,11 +563,11 @@ void tskWriteEEPROM( void *params ) {
 	static unsigned char writesPending = 0;
 	static eeWord word;
 	while (1) {
-		writesPending = uxQueueMessagesWaiting(qEEWrite);
+		//writesPending = uxQueueMessagesWaiting(qEEWrite);
 		if (writesPending >= 2 || eeFlush) {
-			if (xQueueReceive(qEEWrite, &word, 0)) {
+			/*if (xQueueReceive(qEEWrite, &word, 0)) {
 				writeWord(word.address, word.data);
-			}
+			}*/
 		}
 	}
 }
@@ -577,35 +580,31 @@ void tskCheck( void *params ) {
 		printf("Starting Checking task...\r\n");
 	#endif
 	while (1) {
-		if (xQueueReceive(qMsgs, &msg, 100) == pdPASS) {
-			if (STATUS_REGbits.sMSG) {
-				command c;
-				c.su = 0;
-				c.ops = 0;
-				c.cmd = cmdPRINT_MSG;
-				xQueueSend(qCommands, &c, 0);
-			}
-			msgs++;
-			switch(msg.type) {
-				case msgVOLTS:
-					checkVoltage(voltage[msg.cell], msg.cell);
-					fVal = fVoltage[msg.cell];
-					suf = 'V';
-					break;
-				case msgTEMP:
-					checkTemp(temp[msg.cell]);
-					fVal = fTemp[msg.cell];
-					suf = 'C';
-					break;
-				case msgCURRENT:
-					checkCurrent(current);
-					suf = 'A';
-					break;
-				default:
-					break;
-			}
-		} else {
-			// @todo no messages in x time? bad sign. fail out
+		if (STATUS_REGbits.sMSG) {
+			command c;
+			c.su = 0;
+			c.ops = 0;
+			c.cmd = cmdPRINT_MSG;
+			//xQueueSend(qCommands, &c, 0);
+		}
+		msgs++;
+		switch(msg.type) {
+			case msgVOLTS:
+				checkVoltage(voltage[msg.cell], msg.cell);
+				fVal = fVoltage[msg.cell];
+				suf = 'V';
+				break;
+			case msgTEMP:
+				checkTemp(temp[msg.cell]);
+				fVal = fTemp[msg.cell];
+				suf = 'C';
+				break;
+			case msgCURRENT:
+				checkCurrent(current);
+				suf = 'A';
+				break;
+			default:
+				break;
 		}
 		ClrWdt();
 	}		
@@ -627,15 +626,15 @@ void tskUI( void *params ) {
 	for (i = 0; i < uiBUFFER_SIZE; i++) {
 		buffer[i] = 0; // @todo clean this up
 	}
-	if (qCommands == NULL) {
-		qCommands = xQueueCreate(uiCOMMAND_QSIZE, sizeof(command));
+	/*if (qCommands == NULL) {
+		//qCommands = xQueueCreate(uiCOMMAND_QSIZE, sizeof(command));
 		vQueueAddToRegistry(qCommands, "cmd");
-	}
+	}*/
 	#ifdef DEBUG_CONSOLE
 		printf("done!\r\n");
 	#endif
 	while (1) {
-		if (xQueueReceive(qCommands, cmd, 0) == pdPASS) {
+		if (true/*xQueueReceive(qCommands, cmd, 0) == pdPASS*/) {
 			if (cmd->su & !STATUS_REGbits.sSU) {
 				printf("su required");
 				uiState = uiState_SYSTEM_PROMPT;
@@ -738,9 +737,6 @@ void tskUI( void *params ) {
 						prompt = (void *) &uiPROMPT;
 						STATUS_REGbits.sSU = 0;
 						break;
-					case cmdPRINT_MSG_LCD:
-						// @todo implement
-						break;	
 					default:
 						printf("Unknown command!");
 						uiState = uiState_SYSTEM_PROMPT;
@@ -768,8 +764,8 @@ void tskUI( void *params ) {
 					if (*buf == 0x0D) {
 						*buf = 0x00;
 						cmd = parseCmd(&buffer);
-						if (cmd->cmd != 0)
-							while (xQueueSend(qCommands, cmd, 20) != pdPASS);
+						if (cmd->cmd != 0) {
+						}
 						else if ((int) buf != (int) &buffer) 
 							printf("Unknown command!");
 						buf = (void *) &buffer;
@@ -815,7 +811,6 @@ void tskUI( void *params ) {
 							default:
 								break;
 						}
-						while (xQueueSend(qCommands, cmd, 20) != pdPASS);
 						buf = (void *) &buffer;
 						uiState = uiState_WAIT_FOR_INPUT2;
 					} else if (*buf == 0x08) {
