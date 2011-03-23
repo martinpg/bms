@@ -1,0 +1,23 @@
+<!DOCTYPE piklab>
+<piklab>
+  <general>
+    <device>18F2680</device>
+    <tool>c18</tool>
+    <programmer>custom</programmer>
+    <files>
+      <item>main.h</item>
+      <item>18f2620_e_FreeRTOS.lkr</item>
+      <item>18f2680_g_rtos.lkr</item>
+      <item>FreeRTOSConfig.h</item>
+      <item>main.c</item>
+      <item>status.h</item>
+      <item>ui.c</item>
+      <item>ui.h</item>
+    </files>
+    <opened_files>
+      <item>main.h</item>
+      <item>main.c</item>
+    </opened_files>
+  </general>
+  <editors/>
+</piklab>
