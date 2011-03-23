@@ -67,7 +67,7 @@
 
 #define LED_FUNCTION
 
-typedef struct {
+/*typedef struct {
 	float g;
 	float b;
 } cal;
@@ -81,7 +81,7 @@ typedef struct {
 typedef struct {
 	unsigned char address;
 	unsigned int data;
-} eeWord;
+} eeWord;*/
 
 void init( void );
 void main( void );
