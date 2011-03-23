@@ -16,6 +16,8 @@
  
 #define TRUE	1
 #define FALSE	0
+#define true	1
+#define false	0
 #define TEMP_CONFIG_REG		0x60 // @todo do I use this?
 #define ADC_CONFIG			ADC_FOSC_8 & ADC_RIGHT_JUST & ADC_16_TAD
 #define ADC_MUX_DELAY		1 // @todo necessary?
@@ -45,7 +47,7 @@
 #define trisMUX				TRISAbits.TRISA0
 #define trisCURRENT			TRISAbits.TRISA1
 #define trisVREF			TRISAbits.TRISA3
-#define trisRELAY			TRISCbits.TRIS5
+#define trisRELAY			TRISCbits.TRISC5
 #define latRELAY			LATCbits.LATC5
 #define pinMUX_ADDR0		PORTC
 #define trisMUX_ADDR0		TRISC
@@ -66,22 +68,6 @@
 #define ADC_CHCURRENT		ADC_CH1 // @todo update these
 
 #define LED_FUNCTION
-
-/*typedef struct {
-	float g;
-	float b;
-} cal;
-
-typedef struct {
-	unsigned char type;
-	unsigned int raw;
-	unsigned char cell;
-} message;
-
-typedef struct {
-	unsigned char address;
-	unsigned int data;
-} eeWord;*/
 
 void init( void );
 void main( void );
@@ -112,7 +98,7 @@ int floatToInt( float x );
 int convVolts( int x , unsigned int i );
 float intToFloat( int , unsigned int );
 int floatToInt ( float x );
-float conv( float x, cal c );
+//float conv( float x, cal c );
 void tskCheckCurrent( void *params );
 void tskCheckVolts( void *params );
 void tskCheckTemps( void *params );
@@ -123,3 +109,8 @@ void isr_low ( void );
 void low_interrupt ( void );
 void tskUI( void *params );
 unsigned char parseTlm( char* s );
+void setupMUXInput ( void );
+void setupCurrentInput ( void );
+void setupVRefInput ( void );
+void setupLEDOutputs ( void );
+void setupRelayOutput ( void );
