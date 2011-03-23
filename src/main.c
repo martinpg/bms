@@ -34,10 +34,6 @@
 #include "status.h"
 #include "ui.h"
 
-#include "FreeRTOSConfig.h"
-#include "FreeRTOS.h"
-#include "task.h"
-#include "semphr.h"
 #include "serial.h"
 
 const unsigned char uiINPUT = 			"? ";
@@ -75,33 +71,12 @@ volatile unsigned int msgs;
 cal cv[MAX_CELLS];
 cal ci;
 
-xTaskHandle xCurrent = NULL;
-xTaskHandle xVoltage = NULL;
-xTaskHandle xCheck = NULL;
-xTaskHandle xTemp = NULL;
-xTaskHandle xUI = NULL;
-xComPortHandle xSerial = NULL;
-volatile xSemaphoreHandle xADCSem = NULL;
-volatile xQueueHandle qMsgs = NULL; // @todo put this in the correct thread
-volatile xQueueHandle qEEWrite = NULL; // @todo put this in the correct thread
-volatile xQueueHandle qSerialTx = NULL; // put this in the correct thread
-volatile xQueueHandle qCommands = NULL;
-
 void init( void ) {
 	unsigned char i = 0;
 	// Initialize clock
 	OSCCON |= 0xF0;
 	OSCTUNE |= 0x40; //enable pll for intosc
 
-	// Initialize semaphores
-	vSemaphoreCreateBinary(xADCSem);
-	
-	// Initialize queues
-	qMsgs = xQueueCreate(10, sizeof(struct message *));
-	qSerialTx = xQueueCreate(20, sizeof(unsigned char));
-	vQueueAddToRegistry(qMsgs, "msgs");
-	vQueueAddToRegistry(qSerialTx, "tx");
-	
 	// Initialize global variables
 	VRef = VDD;
 	VRef0 = 0;
@@ -252,22 +227,6 @@ void main( void ) {
 		//openRelay();
 		//while(TRUE); // @todo new calibrated setpoints needed (store them in EEPROM)
 	}
-	#ifdef DEBUG_CONSOLE
-		printf("\r\n");
-		printf("Loading OS...");
-	#endif		
-	//xTaskCreate( tskCheckCurrent, ( const char * const ) "ichk", configMINIMAL_STACK_SIZE, NULL, prioDEFAULT, &xCurrent );
-	xTaskCreate( tskCheckTemps, ( const char * const ) "tchk", configMINIMAL_STACK_SIZE, NULL, prioDEFAULT, &xTemp );
-	//xTaskCreate( tskCheckVolts, ( const char * const ) "vchk", configMINIMAL_STACK_SIZE, NULL, prioDEFAULT, &xVoltage );
-	xTaskCreate( tskCheck, ( const char * const ) "chk", configMINIMAL_STACK_SIZE, NULL, prioDEFAULT, &xCheck );
-	xTaskCreate( tskUI, ( const char * const ) "ui", configMINIMAL_STACK_SIZE, NULL, prioDEFAULT, &xUI );
-	#ifdef DEBUG_CONSOLE
-		printf("scheduler started!\r\n");
-	#endif	
-	vTaskStartScheduler();
-	#ifdef
-		printf("OS Stopped!");
-	#endif	
 	while(1){
 		// should never reach here
 	}
