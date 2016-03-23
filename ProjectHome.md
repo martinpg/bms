@@ -1,0 +1,1 @@
+This is an modular battery management and protection system for Li-Ion batteries. It uses the PIC18F microcontroller family as its core.
